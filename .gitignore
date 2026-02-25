@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+coverage/
+backend/dist/
+frontend/dist/
+frontend/*.js
+frontend/*.d.ts
+frontend/*.tsbuildinfo
+.turbo/
