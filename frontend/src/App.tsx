@@ -1,28 +1,138 @@
-function App() {
-  return (
-    <main id="main-content" className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">App Finanças</h1>
-        <p className="mt-2 text-slate-600">
-          Setup inicial concluído. As funcionalidades do produto serão implementadas nas próximas
-          fases.
-        </p>
-      </header>
+import { useEffect, useMemo, useState } from 'react';
+import { ChartCards } from './components/dashboard/ChartCards';
+import { Sidebar } from './components/dashboard/Sidebar';
+import { TopHeader } from './components/dashboard/TopHeader';
+import { TransactionsList } from './components/dashboard/TransactionsList';
+import { ApiClientError, fetchDashboardData } from './services/api';
+import type { DashboardApiData } from './types/finance';
+import {
+  buildAssetsBars,
+  buildPerformanceSeries,
+  buildTransactionGroups,
+  calculateTotalBalance,
+  formatTotalBalance,
+} from './utils/dashboard';
 
-      <section
-        aria-labelledby="roadmap-title"
-        className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-      >
-        <h2 id="roadmap-title" className="text-lg font-semibold text-slate-900">
-          Estado do Projeto
-        </h2>
-        <ul className="mt-4 list-disc space-y-2 pl-5 text-slate-700">
-          <li>Frontend React + TypeScript + Tailwind configurado.</li>
-          <li>Backend Node.js + Express + TypeScript configurado.</li>
-          <li>ESLint, Prettier e estrutura modular inicial definidos.</li>
-        </ul>
-      </section>
-    </main>
+const INITIAL_DASHBOARD: DashboardApiData = {
+  user: null,
+  categories: [],
+  transactions: [],
+};
+
+function App(): JSX.Element {
+  const [dashboard, setDashboard] = useState<DashboardApiData>(INITIAL_DASHBOARD);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState<number>(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let isMounted = true;
+
+    async function loadDashboard(): Promise<void> {
+      try {
+        setLoading(true);
+        setErrorMessage(null);
+
+        const result = await fetchDashboardData(controller.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setDashboard(result);
+      } catch (error) {
+        if (!isMounted || controller.signal.aborted) {
+          return;
+        }
+
+        if (error instanceof ApiClientError) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        setErrorMessage('Falha inesperada ao carregar dashboard.');
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboard();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [reloadKey]);
+
+  const currency = dashboard.user?.defaultCurrency ?? 'EUR';
+  const userName = dashboard.user?.name ?? 'Guest User';
+
+  const totalBalanceLabel = useMemo(() => {
+    const totalBalance = calculateTotalBalance(dashboard.transactions);
+    return formatTotalBalance(totalBalance, currency);
+  }, [currency, dashboard.transactions]);
+
+  const assetsBars = useMemo(
+    () => buildAssetsBars(dashboard.transactions, dashboard.categories),
+    [dashboard.categories, dashboard.transactions],
+  );
+
+  const performanceSeries = useMemo(
+    () => buildPerformanceSeries(dashboard.transactions),
+    [dashboard.transactions],
+  );
+
+  const transactionGroups = useMemo(
+    () => buildTransactionGroups(dashboard.transactions, currency),
+    [currency, dashboard.transactions],
+  );
+
+  return (
+    <div className="min-h-screen bg-[#eef0f1] p-3 lg:p-5">
+      <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+        <div className="lg:grid lg:grid-cols-[240px_1fr]">
+          <Sidebar />
+
+          <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
+            <TopHeader balanceLabel={totalBalanceLabel} userName={userName} />
+
+            {loading ? (
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                A carregar dados da API...
+              </div>
+            ) : null}
+
+            {errorMessage ? (
+              <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                <p>{errorMessage}</p>
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((value) => value + 1)}
+                  className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+                >
+                  Tentar novamente
+                </button>
+              </section>
+            ) : null}
+
+            {!errorMessage ? (
+              <>
+                <ChartCards assetsBars={assetsBars} performanceSeries={performanceSeries} />
+                <TransactionsList groups={transactionGroups} />
+              </>
+            ) : null}
+          </main>
+        </div>
+      </div>
+    </div>
   );
 }
 
