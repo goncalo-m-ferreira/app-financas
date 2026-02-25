@@ -1,4 +1,5 @@
 import { type Prisma, type TransactionType } from '@prisma/client';
+import { eventPublisher } from '../events/noop-event-publisher.js';
 import { AppError } from '../errors/app-error.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -222,6 +223,18 @@ export async function createTransaction(
           icon: true,
         },
       },
+    },
+  });
+
+  await eventPublisher.publish({
+    name: 'transaction.created',
+    payload: {
+      transactionId: transaction.id,
+      userId: transaction.userId,
+      type: transaction.type,
+      amount: transaction.amount.toString(),
+      categoryId: transaction.categoryId,
+      transactionDate: transaction.transactionDate.toISOString(),
     },
   });
 

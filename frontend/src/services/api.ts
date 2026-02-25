@@ -1,14 +1,36 @@
-import type { ApiExpenseCategory, ApiTransaction, ApiUser, DashboardApiData } from '../types/finance';
+import type {
+  ApiTransaction,
+  ApiUser,
+  AuthPayload,
+  CreateTransactionInput,
+  DashboardApiData,
+  LoginInput,
+  RegisterInput,
+} from '../types/finance';
 
 type ApiErrorPayload = {
   message?: string;
   details?: unknown;
 };
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api').replace(
-  /\/$/,
-  '',
-);
+type RequestOptions = {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  token?: string;
+  signal?: AbortSignal;
+};
+
+const AUTH_TOKEN_STORAGE_KEY = 'app_financas.auth_token';
+
+const fallbackApiBaseUrl = (() => {
+  if (typeof window === 'undefined') {
+    return 'http://localhost:4010/api';
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:4010/api`;
+})();
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? fallbackApiBaseUrl).replace(/\/$/, '');
 
 export class ApiClientError extends Error {
   readonly status: number;
@@ -22,22 +44,36 @@ export class ApiClientError extends Error {
   }
 }
 
+function buildHeaders(options: RequestOptions): HeadersInit {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+
+  return headers;
+}
+
 async function parseErrorPayload(response: Response): Promise<ApiErrorPayload | null> {
   try {
-    const payload = (await response.json()) as ApiErrorPayload;
-    return payload;
+    return (await response.json()) as ApiErrorPayload;
   } catch {
     return null;
   }
 }
 
-async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
-    signal,
+    method: options.method ?? 'GET',
+    headers: buildHeaders(options),
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -53,26 +89,65 @@ async function requestJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchDashboardData(signal?: AbortSignal): Promise<DashboardApiData> {
-  const users = await requestJson<ApiUser[]>('/users?take=1', signal);
-  const user = users[0] ?? null;
-
-  if (!user) {
-    return {
-      user: null,
-      categories: [],
-      transactions: [],
-    };
+export function getStoredAuthToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
   }
 
-  const [categories, transactions] = await Promise.all([
-    requestJson<ApiExpenseCategory[]>(`/users/${user.id}/expense-categories`, signal),
-    requestJson<ApiTransaction[]>(`/users/${user.id}/transactions?take=80`, signal),
-  ]);
+  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+}
 
-  return {
-    user,
-    categories,
-    transactions,
-  };
+export function saveAuthToken(token: string): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+}
+
+export async function registerUser(payload: RegisterInput): Promise<AuthPayload> {
+  return requestJson<AuthPayload>('/auth/register', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function loginUser(payload: LoginInput): Promise<AuthPayload> {
+  return requestJson<AuthPayload>('/auth/login', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function fetchCurrentUser(token: string, signal?: AbortSignal): Promise<ApiUser> {
+  return requestJson<ApiUser>('/auth/me', {
+    token,
+    signal,
+  });
+}
+
+export async function fetchDashboardData(token: string, signal?: AbortSignal): Promise<DashboardApiData> {
+  return requestJson<DashboardApiData>('/dashboard?take=120', {
+    token,
+    signal,
+  });
+}
+
+export async function createTransaction(
+  token: string,
+  payload: CreateTransactionInput,
+): Promise<ApiTransaction> {
+  return requestJson<ApiTransaction>('/transactions', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
 }

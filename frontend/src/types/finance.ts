@@ -36,9 +36,35 @@ export type ApiTransaction = {
 };
 
 export type DashboardApiData = {
-  user: ApiUser | null;
+  user: ApiUser;
   categories: ApiExpenseCategory[];
   transactions: ApiTransaction[];
+  balance: string;
+};
+
+export type AuthPayload = {
+  token: string;
+  user: ApiUser;
+};
+
+export type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+  defaultCurrency?: string;
+};
+
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export type CreateTransactionInput = {
+  type: 'INCOME' | 'EXPENSE';
+  amount: number;
+  description?: string;
+  transactionDate: string;
+  categoryId?: string;
 };
 
 export type TransactionListItem = {
