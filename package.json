@@ -14,6 +14,9 @@
     "dev": "concurrently -k \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "npm run build -w backend && npm run build -w frontend",
     "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "db:generate": "npm run prisma:generate -w backend",
+    "db:migrate": "npm run prisma:migrate -w backend",
+    "db:seed": "npm run prisma:seed -w backend",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -24,6 +27,10 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "prisma": "^6.19.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.2"
   }
 }

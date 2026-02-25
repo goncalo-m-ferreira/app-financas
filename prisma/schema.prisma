@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id              String            @id @default(uuid())
+  name            String
+  email           String            @unique
+  passwordHash    String            @map("password_hash")
+  defaultCurrency String            @default("EUR") @map("default_currency")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  categories      ExpenseCategory[]
+  transactions    Transaction[]
+
+  @@map("users")
+}
+
+model ExpenseCategory {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  name         String
+  color        String?
+  icon         String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[] @relation("CategoryTransactions")
+
+  @@unique([userId, name], map: "expense_categories_user_id_name_key")
+  @@unique([userId, id], map: "expense_categories_user_id_id_key")
+  @@map("expense_categories")
+}
+
+model Transaction {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id")
+  categoryId      String?          @map("category_id")
+  type            TransactionType
+  amount          Decimal
+  description     String?
+  transactionDate DateTime         @map("transaction_date")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category        ExpenseCategory? @relation("CategoryTransactions", fields: [userId, categoryId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId, transactionDate], map: "transactions_user_id_transaction_date_idx")
+  @@index([userId, categoryId, transactionDate], map: "transactions_user_id_category_id_transaction_date_idx")
+  @@map("transactions")
+}

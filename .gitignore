@@ -10,4 +10,7 @@ frontend/dist/
 frontend/*.js
 frontend/*.d.ts
 frontend/*.tsbuildinfo
+prisma/dev.db
+prisma/dev.db-journal
+prisma/prisma/
 .turbo/
