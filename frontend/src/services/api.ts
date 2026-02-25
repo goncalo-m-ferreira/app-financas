@@ -13,6 +13,11 @@ type ApiErrorPayload = {
   details?: unknown;
 };
 
+type ApiValidationDetail = {
+  path?: string;
+  message?: string;
+};
+
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
@@ -68,6 +73,26 @@ async function parseErrorPayload(response: Response): Promise<ApiErrorPayload | 
   }
 }
 
+function buildApiErrorMessage(path: string, payload: ApiErrorPayload | null): string {
+  const fallbackMessage = payload?.message ?? `Falha no pedido para ${path}`;
+
+  if (!Array.isArray(payload?.details)) {
+    return fallbackMessage;
+  }
+
+  const firstDetail = payload.details[0] as ApiValidationDetail | undefined;
+
+  if (!firstDetail?.message) {
+    return fallbackMessage;
+  }
+
+  if (firstDetail.path) {
+    return `${fallbackMessage} (${firstDetail.path}: ${firstDetail.message})`;
+  }
+
+  return `${fallbackMessage} (${firstDetail.message})`;
+}
+
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
@@ -79,11 +104,7 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   if (!response.ok) {
     const payload = await parseErrorPayload(response);
 
-    throw new ApiClientError(
-      payload?.message ?? `Falha no pedido para ${path}`,
-      response.status,
-      payload?.details,
-    );
+    throw new ApiClientError(buildApiErrorMessage(path, payload), response.status, payload?.details);
   }
 
   return (await response.json()) as T;
@@ -135,7 +156,7 @@ export async function fetchCurrentUser(token: string, signal?: AbortSignal): Pro
 }
 
 export async function fetchDashboardData(token: string, signal?: AbortSignal): Promise<DashboardApiData> {
-  return requestJson<DashboardApiData>('/dashboard?take=120', {
+  return requestJson<DashboardApiData>('/dashboard', {
     token,
     signal,
   });

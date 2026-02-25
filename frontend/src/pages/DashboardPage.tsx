@@ -6,11 +6,12 @@ import { Sidebar } from '../components/dashboard/Sidebar';
 import { TopHeader } from '../components/dashboard/TopHeader';
 import { TransactionsList } from '../components/dashboard/TransactionsList';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ApiClientError, createTransaction, fetchDashboardData } from '../services/api';
 import type { CreateTransactionInput, DashboardApiData } from '../types/finance';
 import {
-  buildAssetsBars,
-  buildPerformanceSeries,
+  buildBalanceTrendData,
+  buildExpenseByCategoryData,
   buildTransactionGroups,
   calculateTotalBalance,
   formatTotalBalance,
@@ -32,6 +33,7 @@ const INITIAL_DASHBOARD: DashboardApiData = {
 
 export function DashboardPage(): JSX.Element {
   const { token, user, logout } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<DashboardApiData>(INITIAL_DASHBOARD);
   const [loading, setLoading] = useState<boolean>(true);
@@ -99,15 +101,12 @@ export function DashboardPage(): JSX.Element {
     return formatTotalBalance(totalBalance, currency);
   }, [currency, dashboard.transactions]);
 
-  const assetsBars = useMemo(
-    () => buildAssetsBars(dashboard.transactions, dashboard.categories),
+  const expenseByCategory = useMemo(
+    () => buildExpenseByCategoryData(dashboard.transactions, dashboard.categories),
     [dashboard.categories, dashboard.transactions],
   );
 
-  const performanceSeries = useMemo(
-    () => buildPerformanceSeries(dashboard.transactions),
-    [dashboard.transactions],
-  );
+  const balanceTrend = useMemo(() => buildBalanceTrendData(dashboard.transactions), [dashboard.transactions]);
 
   const transactionGroups = useMemo(
     () => buildTransactionGroups(dashboard.transactions, currency),
@@ -135,10 +134,10 @@ export function DashboardPage(): JSX.Element {
 
   return (
     <>
-      <div className="min-h-screen bg-[#eef0f1] p-3 lg:p-5">
-        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+      <div className="min-h-screen bg-[#eef0f1] p-3 dark:bg-[#020617] lg:p-5">
+        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[#0b1220] dark:shadow-[0_20px_55px_rgba(2,6,23,0.85)]">
           <div className="lg:grid lg:grid-cols-[240px_1fr]">
-            <Sidebar />
+            <Sidebar isDarkMode={isDarkMode} onToggleTheme={toggleTheme} />
 
             <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
               <TopHeader
@@ -149,7 +148,7 @@ export function DashboardPage(): JSX.Element {
               />
 
               {loading ? (
-                <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                   A carregar dados da API...
                 </div>
               ) : null}
@@ -169,7 +168,12 @@ export function DashboardPage(): JSX.Element {
 
               {!errorMessage ? (
                 <>
-                  <ChartCards assetsBars={assetsBars} performanceSeries={performanceSeries} />
+                  <ChartCards
+                    expenseByCategory={expenseByCategory}
+                    balanceTrend={balanceTrend}
+                    currency={currency}
+                    isDarkMode={isDarkMode}
+                  />
                   <TransactionsList groups={transactionGroups} />
                 </>
               ) : null}

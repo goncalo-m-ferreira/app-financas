@@ -12,17 +12,19 @@ export function TopHeader({
   onLogout,
 }: TopHeaderProps): JSX.Element {
   return (
-    <header className="rounded-xl bg-slate-50 px-6 py-6">
+    <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
-          <p className="text-3xl font-semibold tracking-tight text-slate-900">{balanceLabel}</p>
-          <p className="text-sm text-slate-500">Your Total Balance as of Today</p>
+          <p className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            {balanceLabel}
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Your Total Balance as of Today</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
             <SearchIcon />
             Search
@@ -30,7 +32,7 @@ export function TopHeader({
 
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
             <BellIcon />
             Notifications
@@ -39,12 +41,12 @@ export function TopHeader({
           <button
             type="button"
             aria-label="Open quick actions"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <GridIcon />
           </button>
 
-          <span className="ml-2 text-sm font-medium text-slate-800">{userName}</span>
+          <span className="ml-2 text-sm font-medium text-slate-800 dark:text-slate-100">{userName}</span>
 
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-xs font-semibold text-cyan-700">
             GM
@@ -62,7 +64,7 @@ export function TopHeader({
           <button
             type="button"
             onClick={onLogout}
-            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
             Logout
           </button>

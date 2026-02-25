@@ -19,6 +19,10 @@ export function errorHandler(
   const requestId = req.requestId;
 
   if (err instanceof ZodError) {
+    console.warn(
+      `[validation-error] requestId=${requestId ?? 'n/a'} issues=${JSON.stringify(err.issues)}`,
+    );
+
     return res.status(400).json({
       message: 'Dados de entrada inválidos.',
       details: err.issues.map((issue) => ({
@@ -44,6 +48,8 @@ export function errorHandler(
       requestId,
     });
   }
+
+  console.error(`[error-handler] requestId=${requestId ?? 'n/a'}`, err);
 
   res.status(500).json({
     message: 'Erro interno do servidor.',

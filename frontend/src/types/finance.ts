@@ -89,15 +89,13 @@ export type TransactionGroup = {
   items: TransactionListItem[];
 };
 
-export type AssetsBarGroup = {
-  id: string;
-  first: number;
-  second: number;
-  third: number;
-  label: string;
+export type ExpenseByCategoryDatum = {
+  category: string;
+  expense: number;
+  color: string;
 };
 
-export type PerformanceSeries = {
-  primary: number[];
-  secondary: number[];
+export type BalanceTrendDatum = {
+  dateLabel: string;
+  balance: number;
 };

@@ -1,8 +1,8 @@
 import type {
   ApiExpenseCategory,
   ApiTransaction,
-  AssetsBarGroup,
-  PerformanceSeries,
+  BalanceTrendDatum,
+  ExpenseByCategoryDatum,
   TransactionGroup,
   TransactionListItem,
 } from '../types/finance';
@@ -10,24 +10,6 @@ import type {
 const ACCOUNT_LABELS = ['Personal CHF', 'Mastercard 1491', 'VISA 9091', 'AmEx 7404'];
 
 const AVATAR_PALETTE = ['#fca5a5', '#fdba74', '#93c5fd', '#86efac', '#c4b5fd', '#f9a8d4', '#67e8f9'];
-
-const FALLBACK_BARS: AssetsBarGroup[] = [
-  { id: '1', first: 22, second: 36, third: 30, label: '2' },
-  { id: '2', first: 28, second: 42, third: 32, label: '5' },
-  { id: '3', first: 36, second: 58, third: 44, label: '9' },
-  { id: '4', first: 44, second: 70, third: 58, label: '12' },
-  { id: '5', first: 56, second: 86, third: 72, label: '16' },
-  { id: '6', first: 62, second: 92, third: 78, label: '19' },
-  { id: '7', first: 58, second: 88, third: 74, label: '23' },
-  { id: '8', first: 54, second: 76, third: 70, label: '26' },
-  { id: '9', first: 48, second: 68, third: 64, label: '30' },
-  { id: '10', first: 42, second: 60, third: 56, label: '31' },
-];
-
-const FALLBACK_PERFORMANCE: PerformanceSeries = {
-  primary: [26, 28, 33, 40, 38, 42, 45, 47, 54, 52, 60, 66, 74, 78, 74, 72, 70, 71, 68, 66, 55, 50, 57, 64],
-  secondary: [24, 22, 25, 27, 30, 29, 31, 34, 35, 37, 39, 41, 48, 53, 51, 47, 42, 39, 41, 38, 35, 32, 30, 29],
-};
 
 function hashText(input: string): number {
   let hash = 0;
@@ -179,91 +161,81 @@ export function buildTransactionGroups(
   });
 }
 
-export function buildAssetsBars(
+export function buildExpenseByCategoryData(
   transactions: ApiTransaction[],
   categories: ApiExpenseCategory[],
-): AssetsBarGroup[] {
-  if (transactions.length === 0) {
-    return FALLBACK_BARS;
-  }
+): ExpenseByCategoryDatum[] {
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const totalsByCategory = new Map<string, number>();
 
-  const bars = FALLBACK_BARS.map((group) => ({ ...group }));
+  for (const transaction of transactions) {
+    if (transaction.type !== 'EXPENSE' || !transaction.categoryId) {
+      continue;
+    }
 
-  transactions.forEach((transaction, index) => {
-    const target = bars[index % bars.length];
     const amount = Number.parseFloat(transaction.amount);
 
     if (!Number.isFinite(amount)) {
-      return;
+      continue;
     }
 
-    const contribution = Math.min(24, Math.max(4, Math.round(amount / 45)));
-
-    if (transaction.type === 'EXPENSE') {
-      target.second = Math.min(110, target.second + contribution);
-      target.third = Math.min(110, target.third + Math.round(contribution / 2));
-      return;
-    }
-
-    target.first = Math.min(110, target.first + contribution);
-    target.third = Math.min(110, target.third + Math.round(contribution / 3));
-  });
-
-  categories.forEach((category, index) => {
-    const target = bars[index % bars.length];
-
-    if (category.color) {
-      target.third = Math.min(110, target.third + 2);
-    }
-  });
-
-  return bars;
-}
-
-function createSeriesPath(values: number[]): number[] {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-
-  if (min === max) {
-    return values.map(() => 50);
+    totalsByCategory.set(transaction.categoryId, (totalsByCategory.get(transaction.categoryId) ?? 0) + amount);
   }
 
-  return values.map((value) => 20 + ((value - min) / (max - min)) * 60);
-}
+  const dataset = Array.from(totalsByCategory.entries())
+    .map(([categoryId, total]) => {
+      const category = categoryById.get(categoryId);
 
-export function buildPerformanceSeries(transactions: ApiTransaction[]): PerformanceSeries {
-  if (transactions.length === 0) {
-    return FALLBACK_PERFORMANCE;
+      return {
+        category: category?.name ?? 'Uncategorized',
+        expense: Number(total.toFixed(2)),
+        color: normalizeHexColor(category?.color, '#60a5fa'),
+      };
+    })
+    .sort((left, right) => right.expense - left.expense)
+    .slice(0, 8);
+
+  if (dataset.length > 0) {
+    return dataset;
   }
 
-  const buckets = new Array(24).fill(0);
+  return categories.slice(0, 5).map((category, index) => ({
+    category: category.name,
+    expense: 0,
+    color: normalizeHexColor(category.color, AVATAR_PALETTE[index % AVATAR_PALETTE.length]),
+  }));
+}
 
-  transactions.forEach((transaction, index) => {
+export function buildBalanceTrendData(transactions: ApiTransaction[]): BalanceTrendDatum[] {
+  const sortedTransactions = [...transactions].sort(
+    (left, right) => new Date(left.transactionDate).getTime() - new Date(right.transactionDate).getTime(),
+  );
+
+  let runningBalance = 0;
+
+  const points = sortedTransactions.map((transaction) => {
     const amount = Number.parseFloat(transaction.amount);
 
-    if (!Number.isFinite(amount)) {
-      return;
+    if (Number.isFinite(amount)) {
+      runningBalance += transaction.type === 'EXPENSE' ? -amount : amount;
     }
 
-    const direction = transaction.type === 'EXPENSE' ? -1 : 1;
-    buckets[index % buckets.length] += amount * direction;
+    return {
+      dateLabel: new Intl.DateTimeFormat('en-GB', {
+        day: '2-digit',
+        month: 'short',
+      }).format(new Date(transaction.transactionDate)),
+      balance: Number(runningBalance.toFixed(2)),
+    };
   });
 
-  let cumulativePrimary = 0;
-  let cumulativeSecondary = 0;
+  if (points.length > 0) {
+    return points;
+  }
 
-  const primaryRaw = buckets.map((value) => {
-    cumulativePrimary += value;
-    return cumulativePrimary;
-  });
-
-  const secondaryRaw = buckets.map((value) => {
-    cumulativeSecondary += Math.abs(value);
-    return cumulativeSecondary;
-  });
-
-  return {
-    primary: createSeriesPath(primaryRaw),
-    secondary: createSeriesPath(secondaryRaw),
-  };
+  return [
+    { dateLabel: 'Day 1', balance: 0 },
+    { dateLabel: 'Day 2', balance: 0 },
+    { dateLabel: 'Day 3', balance: 0 },
+  ];
 }

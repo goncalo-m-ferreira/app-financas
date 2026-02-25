@@ -27,10 +27,15 @@ const secondaryItems: NavItem[] = [
   { label: 'Logout', icon: <ExitIcon /> },
 ];
 
-export function Sidebar(): JSX.Element {
+type SidebarProps = {
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
+};
+
+export function Sidebar({ isDarkMode, onToggleTheme }: SidebarProps): JSX.Element {
   return (
-    <aside className="border-b border-slate-200 bg-white px-5 py-6 lg:h-screen lg:border-b-0 lg:border-r">
-      <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100">
+    <aside className="border-b border-slate-200 bg-white px-5 py-6 dark:border-slate-700 dark:bg-slate-900 lg:h-screen lg:border-b-0 lg:border-r">
+      <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
         <PlusMarkIcon />
       </div>
 
@@ -42,22 +47,31 @@ export function Sidebar(): JSX.Element {
               className={[
                 'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
                 item.active
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
               ].join(' ')}
               aria-current={item.active ? 'page' : undefined}
             >
-              <span className={item.active ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
+              <span
+                className={
+                  item.active ? 'text-white dark:text-slate-900' : 'text-slate-400 dark:text-slate-500'
+                }
+              >
+                {item.icon}
+              </span>
               <span className="truncate">{item.label}</span>
               {item.badge ? (
-                <span className="ml-auto rounded bg-slate-200 px-1.5 text-xs text-slate-700">
+                <span className="ml-auto rounded bg-slate-200 px-1.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-100">
                   {item.badge}
                 </span>
               ) : null}
             </button>
 
             {item.children ? (
-              <ul className="space-y-1 pl-11 pt-2 text-xs text-slate-500" aria-label={`${item.label} accounts`}>
+              <ul
+                className="space-y-1 pl-11 pt-2 text-xs text-slate-500 dark:text-slate-400"
+                aria-label={`${item.label} accounts`}
+              >
                 {item.children.map((child) => (
                   <li key={child} className="truncate">
                     {child}
@@ -69,25 +83,39 @@ export function Sidebar(): JSX.Element {
         ))}
       </nav>
 
-      <div className="mt-10 space-y-1 border-t border-slate-100 pt-6">
+      <div className="mt-10 space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
         {secondaryItems.map((item) => (
           <button
             key={item.label}
             type="button"
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
-            <span className="text-slate-400">{item.icon}</span>
+            <span className="text-slate-400 dark:text-slate-500">{item.icon}</span>
             {item.label}
           </button>
         ))}
       </div>
 
-      <div className="mt-8 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500">
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        className="mt-8 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
         <span>Switch to dark</span>
-        <span className="h-4 w-8 rounded-full bg-slate-900 p-0.5">
-          <span className="block h-3 w-3 rounded-full bg-white" />
+        <span
+          className={[
+            'h-5 w-9 rounded-full p-0.5 transition',
+            isDarkMode ? 'bg-cyan-400' : 'bg-slate-900',
+          ].join(' ')}
+        >
+          <span
+            className={[
+              'block h-4 w-4 rounded-full bg-white transition',
+              isDarkMode ? 'translate-x-4' : 'translate-x-0',
+            ].join(' ')}
+          />
         </span>
-      </div>
+      </button>
     </aside>
   );
 }
@@ -100,7 +128,7 @@ function PlusMarkIcon(): JSX.Element {
         stroke="currentColor"
         strokeWidth="2.5"
         strokeLinecap="round"
-        className="text-slate-900"
+        className="text-slate-900 dark:text-slate-100"
       />
     </svg>
   );
