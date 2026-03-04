@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage, RegisterPage } from './pages/AuthPage';
 import { AccountsCardsPage } from './pages/AccountsCardsPage';
+import { AdminPage } from './pages/AdminPage';
 import { BudgetPage } from './pages/BudgetPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HomePage } from './pages/HomePage';
@@ -25,6 +26,10 @@ function App(): JSX.Element {
         <Route path="/mailbox" element={<MailboxPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+
+      <Route element={<ProtectedRoute requiredRole="ADMIN" />}>
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

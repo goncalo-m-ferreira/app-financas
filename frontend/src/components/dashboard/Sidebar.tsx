@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
 type NavItem = {
@@ -21,15 +22,17 @@ const primaryItems: NavItem[] = [
 ];
 
 const secondaryItems: NavItem[] = [{ id: 'settings', label: 'Settings', icon: <GearIcon />, href: '/settings' }];
+const adminItem: NavItem = { id: 'admin', label: 'Admin', icon: <ShieldIcon />, href: '/admin' };
 
 type SidebarProps = {
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  activeItem: 'home' | 'dashboard' | 'accounts' | 'budgets' | 'reports' | 'mailbox' | 'settings';
+  activeItem: 'home' | 'dashboard' | 'accounts' | 'budgets' | 'reports' | 'mailbox' | 'settings' | 'admin';
 };
 
 type SidebarContentProps = SidebarProps & {
   unreadCount: number;
+  isAdmin: boolean;
   onNavigate?: () => void;
   showTopMark?: boolean;
 };
@@ -39,9 +42,12 @@ function SidebarContent({
   onToggleTheme,
   activeItem,
   unreadCount,
+  isAdmin,
   onNavigate,
   showTopMark = false,
 }: SidebarContentProps): JSX.Element {
+  const visibleSecondaryItems = isAdmin ? [adminItem, ...secondaryItems] : secondaryItems;
+
   return (
     <>
       {showTopMark ? (
@@ -118,7 +124,7 @@ function SidebarContent({
       </nav>
 
       <div className="mt-10 space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
-        {secondaryItems.map((item) =>
+        {visibleSecondaryItems.map((item) =>
           item.href ? (
             <Link
               key={item.label}
@@ -176,6 +182,7 @@ function SidebarContent({
 }
 
 export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps): JSX.Element {
+  const { isAdmin } = useAuth();
   const { unreadCount } = useNotifications();
   const location = useLocation();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
@@ -275,6 +282,7 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
             onToggleTheme={onToggleTheme}
             activeItem={activeItem}
             unreadCount={unreadCount}
+            isAdmin={isAdmin}
             onNavigate={() => setIsMobileSidebarOpen(false)}
           />
         </aside>
@@ -286,6 +294,7 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
           onToggleTheme={onToggleTheme}
           activeItem={activeItem}
           unreadCount={unreadCount}
+          isAdmin={isAdmin}
           showTopMark
         />
       </aside>
@@ -381,6 +390,15 @@ function GearIcon(): JSX.Element {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
       <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ShieldIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3 5 6v6c0 4.2 2.7 7.9 7 9 4.3-1.1 7-4.8 7-9V6l-7-3z" stroke="currentColor" strokeWidth="2" />
+      <path d="M9.5 12.5 11 14l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

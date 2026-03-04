@@ -2,7 +2,7 @@ import type { SignOptions } from 'jsonwebtoken';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
-import { Prisma, type User } from '@prisma/client';
+import { Prisma, UserRole, type User } from '@prisma/client';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { prisma } from '../lib/prisma.js';
@@ -14,6 +14,7 @@ type SafeUser = {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
   defaultCurrency: string;
   avatarUrl: string | null;
   createdAt: Date;
@@ -73,6 +74,7 @@ function toSafeUser(user: User): SafeUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    role: user.role,
     defaultCurrency: user.defaultCurrency,
     avatarUrl: user.avatarUrl,
     createdAt: user.createdAt,
@@ -86,6 +88,27 @@ function throwConflictIfUniqueViolation(error: unknown, message: string): never 
   }
 
   throw error;
+}
+
+function isAdminBootstrapEmail(email: string): boolean {
+  if (!env.adminEmail) {
+    return false;
+  }
+
+  return email.trim().toLowerCase() === env.adminEmail;
+}
+
+async function promoteToAdminIfBootstrapEmail(user: User): Promise<User> {
+  if (!isAdminBootstrapEmail(user.email) || user.role === UserRole.ADMIN) {
+    return user;
+  }
+
+  return prisma.user.update({
+    where: { id: user.id },
+    data: {
+      role: UserRole.ADMIN,
+    },
+  });
 }
 
 function createAccessToken(user: SafeUser): string {
@@ -156,15 +179,17 @@ function resolveGoogleProfileOrThrow(payload: TokenPayload | undefined): {
 
 export async function register(input: RegisterInput): Promise<AuthResponse> {
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+  const normalizedEmail = input.email.trim().toLowerCase();
 
   try {
     const user = await prisma.$transaction(async (tx) => {
       const createdUser = await tx.user.create({
         data: {
           name: input.name,
-          email: input.email,
+          email: normalizedEmail,
           passwordHash,
           defaultCurrency: input.defaultCurrency ?? 'EUR',
+          role: isAdminBootstrapEmail(normalizedEmail) ? UserRole.ADMIN : UserRole.USER,
         },
       });
 
@@ -203,7 +228,8 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
     throw new AppError('Credenciais inválidas.', 401);
   }
 
-  const safeUser = toSafeUser(user);
+  const loginUser = await promoteToAdminIfBootstrapEmail(user);
+  const safeUser = toSafeUser(loginUser);
 
   return {
     token: createAccessToken(safeUser),
@@ -241,6 +267,7 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
           googleId: googleProfile.googleId,
           avatarUrl: googleProfile.avatarUrl,
           defaultCurrency: 'EUR',
+          role: isAdminBootstrapEmail(googleProfile.email) ? UserRole.ADMIN : UserRole.USER,
         },
       });
 
@@ -265,6 +292,11 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
 
     if (googleProfile.avatarUrl && googleProfile.avatarUrl !== existingUser.avatarUrl) {
       updateData.avatarUrl = googleProfile.avatarUrl;
+      shouldUpdate = true;
+    }
+
+    if (isAdminBootstrapEmail(googleProfile.email) && existingUser.role !== UserRole.ADMIN) {
+      updateData.role = UserRole.ADMIN;
       shouldUpdate = true;
     }
 

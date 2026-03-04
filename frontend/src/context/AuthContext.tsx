@@ -22,6 +22,7 @@ type AuthContextValue = {
   token: string | null;
   user: ApiUser | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isInitializing: boolean;
   login: (payload: LoginInput) => Promise<void>;
   loginWithGoogleCredential: (credential: string) => Promise<void>;
@@ -111,6 +112,7 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
       token,
       user,
       isAuthenticated: Boolean(token),
+      isAdmin: user?.role === 'ADMIN',
       isInitializing,
       login,
       loginWithGoogleCredential,

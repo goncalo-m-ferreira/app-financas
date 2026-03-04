@@ -1,4 +1,5 @@
 import type {
+  AdminOverviewResponse,
   ApiBudget,
   ApiExpenseCategory,
   ApiNotification,
@@ -192,6 +193,19 @@ export async function loginWithGoogle(payload: GoogleAuthInput): Promise<AuthPay
 
 export async function fetchCurrentUser(token: string, signal?: AbortSignal): Promise<ApiUser> {
   return requestJson<ApiUser>('/auth/me', {
+    token,
+    signal,
+  });
+}
+
+export async function fetchAdminOverview(
+  token: string,
+  take = 20,
+  signal?: AbortSignal,
+): Promise<AdminOverviewResponse> {
+  const queryString = buildQueryString({ take });
+
+  return requestJson<AdminOverviewResponse>(`/admin/overview${queryString}`, {
     token,
     signal,
   });

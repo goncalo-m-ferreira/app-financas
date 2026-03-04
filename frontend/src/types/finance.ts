@@ -2,6 +2,7 @@ export type ApiUser = {
   id: string;
   name: string;
   email: string;
+  role: 'USER' | 'ADMIN';
   defaultCurrency: string;
   avatarUrl: string | null;
   createdAt: string;
@@ -217,6 +218,21 @@ export type HomeInsightsResponse = {
     hasAlerts: boolean;
     items: HomeBudgetInsight[];
   };
+};
+
+export type AdminOverviewUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  createdAt: string;
+};
+
+export type AdminOverviewResponse = {
+  summary: {
+    totalUsers: number;
+  };
+  users: AdminOverviewUser[];
 };
 
 export type TransactionListItem = {

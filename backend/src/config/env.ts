@@ -10,6 +10,7 @@ const reportsQueueName = process.env.REPORTS_QUEUE_NAME ?? 'pdf_reports_queue';
 const googleClientId =
   process.env.GOOGLE_CLIENT_ID ??
   '84485673553-br2mf821lbd9qfpqmjqlkm3c54g4uijj.apps.googleusercontent.com';
+const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase() || undefined;
 const fallbackDatabaseUrl = 'postgresql://postgres:postgres@localhost:5432/app_financas?schema=public';
 const databaseUrl = process.env.DATABASE_URL ?? fallbackDatabaseUrl;
 process.env.DATABASE_URL = databaseUrl;
@@ -22,5 +23,6 @@ export const env = {
   rabbitMqUrl,
   reportsQueueName,
   googleClientId,
+  adminEmail,
   databaseUrl,
 };

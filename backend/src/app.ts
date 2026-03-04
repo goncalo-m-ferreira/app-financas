@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { adminRouter } from './routes/admin.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { budgetsRouter } from './routes/budgets.routes.js';
 import { reportsPublicDir } from './config/paths.js';
@@ -31,6 +32,7 @@ app.use('/reports', express.static(reportsPublicDir));
 
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', adminRouter);
 app.use('/api', dashboardRouter);
 app.use('/api', budgetsRouter);
 app.use('/api/transactions', authTransactionsRouter);

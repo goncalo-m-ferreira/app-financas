@@ -24,6 +24,11 @@ enum NotificationType {
   REPORT
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id              String            @id @default(uuid())
   name            String
@@ -32,6 +37,7 @@ model User {
   googleId        String?           @unique @map("google_id")
   avatarUrl       String?           @map("avatar_url")
   defaultCurrency String            @default("EUR") @map("default_currency")
+  role            UserRole          @default(USER)
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   categories      ExpenseCategory[]

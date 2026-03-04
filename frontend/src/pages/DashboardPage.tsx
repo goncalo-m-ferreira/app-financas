@@ -40,6 +40,7 @@ const INITIAL_DASHBOARD: DashboardApiData = {
     id: '',
     name: 'Utilizador',
     email: '',
+    role: 'USER',
     defaultCurrency: 'EUR',
     avatarUrl: null,
     createdAt: '',
