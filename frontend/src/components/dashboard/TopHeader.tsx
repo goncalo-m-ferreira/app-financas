@@ -1,7 +1,13 @@
+import { useEffect, useState } from 'react';
+import { MonthYearSelector } from '../common/MonthYearSelector';
+import { useSearch } from '../../context/SearchContext';
+import { useDebounce } from '../../hooks/useDebounce';
+
 type TopHeaderProps = {
   balanceLabel: string;
   userName: string;
   onAddTransaction: () => void;
+  onImportCsv: () => void;
   onLogout: () => void;
 };
 
@@ -9,8 +15,25 @@ export function TopHeader({
   balanceLabel,
   userName,
   onAddTransaction,
+  onImportCsv,
   onLogout,
 }: TopHeaderProps): JSX.Element {
+  const { searchQuery, setSearchQuery } = useSearch();
+  const [searchInput, setSearchInput] = useState<string>(searchQuery);
+  const debouncedSearchInput = useDebounce(searchInput, 500);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (debouncedSearchInput === searchQuery) {
+      return;
+    }
+
+    setSearchQuery(debouncedSearchInput);
+  }, [debouncedSearchInput, searchQuery, setSearchQuery]);
+
   return (
     <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -18,17 +41,27 @@ export function TopHeader({
           <p className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
             {balanceLabel}
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Your Total Balance as of Today</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Your Total Balance for the Selected Month
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            <SearchIcon />
-            Search
-          </button>
+          <MonthYearSelector />
+
+          <label className="relative block">
+            <span className="sr-only">Search transactions</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+              <SearchIcon />
+            </span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search transactions..."
+              className="h-9 w-56 rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-slate-500"
+            />
+          </label>
 
           <button
             type="button"
@@ -54,11 +87,19 @@ export function TopHeader({
 
           <button
             type="button"
-            aria-label="Nova transação"
             onClick={onAddTransaction}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-white transition hover:bg-slate-800"
+            className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
           >
             <PlusIcon />
+            Add Transaction
+          </button>
+
+          <button
+            type="button"
+            onClick={onImportCsv}
+            className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Import CSV
           </button>
 
           <button

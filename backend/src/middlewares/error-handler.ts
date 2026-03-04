@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { AppError } from '../errors/app-error.js';
 import type { RequestWithId } from '../types/http.js';
@@ -45,6 +46,22 @@ export function errorHandler(
     return res.status(400).json({
       message: 'Erro de base de dados.',
       details: { code: err.code, meta: err.meta },
+      requestId,
+    });
+  }
+
+  if (err instanceof MulterError) {
+    const messageByCode: Record<string, string> = {
+      LIMIT_FILE_SIZE: 'CSV excede o tamanho máximo permitido (2MB).',
+      LIMIT_UNEXPECTED_FILE: 'Campo de ficheiro inválido. Use o campo "file".',
+    };
+
+    return res.status(400).json({
+      message: messageByCode[err.code] ?? 'Falha no upload do ficheiro CSV.',
+      details: {
+        code: err.code,
+        field: err.field,
+      },
       requestId,
     });
   }

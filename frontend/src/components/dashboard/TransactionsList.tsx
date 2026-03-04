@@ -2,9 +2,19 @@ import type { TransactionGroup } from '../../types/finance';
 
 type TransactionsListProps = {
   groups: TransactionGroup[];
+  searchQuery?: string;
+  onEdit?: (transactionId: string) => void;
+  onDelete?: (transactionId: string) => void;
 };
 
-export function TransactionsList({ groups }: TransactionsListProps): JSX.Element {
+export function TransactionsList({
+  groups,
+  searchQuery,
+  onEdit,
+  onDelete,
+}: TransactionsListProps): JSX.Element {
+  const normalizedSearchQuery = searchQuery?.trim() ?? '';
+
   return (
     <section
       className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
@@ -22,7 +32,9 @@ export function TransactionsList({ groups }: TransactionsListProps): JSX.Element
       <div className="max-h-[520px] overflow-auto">
         {groups.length === 0 ? (
           <div className="px-6 py-20 text-center text-sm text-slate-500 dark:text-slate-400">
-            Sem transações disponíveis. Cria transações na API para preencher esta tabela.
+            {normalizedSearchQuery
+              ? `No transactions found for "${normalizedSearchQuery}".`
+              : 'No transactions available for this period.'}
           </div>
         ) : (
           groups.map((group) => (
@@ -41,7 +53,7 @@ export function TransactionsList({ groups }: TransactionsListProps): JSX.Element
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[56px_1fr_auto_auto_auto_18px] items-center gap-3 py-3 text-sm"
+                    className="grid grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-3 py-3 text-sm"
                   >
                     <span className="text-xs text-slate-400 dark:text-slate-500">{item.timeLabel}</span>
 
@@ -85,13 +97,24 @@ export function TransactionsList({ groups }: TransactionsListProps): JSX.Element
                       {item.accountLabel}
                     </span>
 
-                    <button
-                      type="button"
-                      aria-label={`Open options for ${item.merchantLabel}`}
-                      className="text-slate-400 transition hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
-                    >
-                      <DotsIcon />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(item.id)}
+                        aria-label={`Edit ${item.merchantLabel}`}
+                        className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete?.(item.id)}
+                        aria-label={`Delete ${item.merchantLabel}`}
+                        className="rounded p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-300"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -100,39 +123,31 @@ export function TransactionsList({ groups }: TransactionsListProps): JSX.Element
         )}
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <span className="inline-flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-            +
-          </span>
-          Zaubi 2023. All rights reserved.
-        </span>
-
-        <div className="flex items-center gap-4">
-          <button type="button" className="transition hover:text-slate-800 dark:hover:text-slate-100">
-            About
-          </button>
-          <button type="button" className="transition hover:text-slate-800 dark:hover:text-slate-100">
-            Help
-          </button>
-          <button type="button" className="transition hover:text-slate-800 dark:hover:text-slate-100">
-            Support
-          </button>
-          <button type="button" className="transition hover:text-slate-800 dark:hover:text-slate-100">
-            Terms & Conditions
-          </button>
-        </div>
-      </footer>
     </section>
   );
 }
 
-function DotsIcon(): JSX.Element {
+function EditIcon(): JSX.Element {
   return (
-    <svg width="4" height="14" viewBox="0 0 4 14" fill="none" aria-hidden="true">
-      <circle cx="2" cy="2" r="1.2" fill="currentColor" />
-      <circle cx="2" cy="7" r="1.2" fill="currentColor" />
-      <circle cx="2" cy="12" r="1.2" fill="currentColor" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 20h4l10-10-4-4L4 16v4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashIcon(): JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M6 7l1 12h10l1-12M9 7V4h6v3" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }

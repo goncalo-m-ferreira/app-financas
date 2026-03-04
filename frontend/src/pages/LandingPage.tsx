@@ -5,7 +5,7 @@ export function LandingPage(): JSX.Element {
   const { isAuthenticated, isInitializing } = useAuth();
 
   if (!isInitializing && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (

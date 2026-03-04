@@ -119,12 +119,23 @@ export async function deleteExpenseCategory(
   await ensureUserExists(userId);
   await getCategoryOrThrow(userId, categoryId);
 
-  return prisma.expenseCategory.delete({
-    where: {
-      userId_id: {
-        userId,
-        id: categoryId,
+  try {
+    return await prisma.expenseCategory.delete({
+      where: {
+        userId_id: {
+          userId,
+          id: categoryId,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      throw new AppError(
+        'Cannot delete category because it is linked to existing transactions.',
+        409,
+      );
+    }
+
+    throw error;
+  }
 }

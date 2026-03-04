@@ -1,11 +1,28 @@
 import type {
+  ApiBudget,
+  ApiExpenseCategory,
+  ApiNotification,
+  ApiReport,
   ApiTransaction,
   ApiUser,
+  ApiWallet,
   AuthPayload,
+  BudgetOverview,
+  CreateBudgetInput,
+  CreateExpenseCategoryInput,
+  CreateReportInput,
   CreateTransactionInput,
+  CreateWalletInput,
   DashboardApiData,
+  GoogleAuthInput,
+  HomeInsightsResponse,
+  ImportTransactionsInput,
+  ImportTransactionsResult,
   LoginInput,
+  MonthYearFilter,
   RegisterInput,
+  UpdateTransactionInput,
+  UpdateWalletInput,
 } from '../types/finance';
 
 type ApiErrorPayload = {
@@ -27,15 +44,9 @@ type RequestOptions = {
 
 const AUTH_TOKEN_STORAGE_KEY = 'app_financas.auth_token';
 
-const fallbackApiBaseUrl = (() => {
-  if (typeof window === 'undefined') {
-    return 'http://localhost:4010/api';
-  }
-
-  return `${window.location.protocol}//${window.location.hostname}:4010/api`;
-})();
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? fallbackApiBaseUrl).replace(/\/$/, '');
+const fallbackApiUrl = 'http://localhost:4010';
+const apiUrl = (import.meta.env.VITE_API_URL ?? fallbackApiUrl).replace(/\/$/, '');
+const API_BASE_URL = apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
 
 export class ApiClientError extends Error {
   readonly status: number;
@@ -54,7 +65,7 @@ function buildHeaders(options: RequestOptions): HeadersInit {
     Accept: 'application/json',
   };
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !isFormData(options.body)) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -63,6 +74,10 @@ function buildHeaders(options: RequestOptions): HeadersInit {
   }
 
   return headers;
+}
+
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
 async function parseErrorPayload(response: Response): Promise<ApiErrorPayload | null> {
@@ -93,11 +108,31 @@ function buildApiErrorMessage(path: string, payload: ApiErrorPayload | null): st
   return `${fallbackMessage} (${firstDetail.message})`;
 }
 
+function buildQueryString(params: Record<string, string | number | undefined>): string {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined) {
+      return;
+    }
+
+    searchParams.set(key, String(value));
+  });
+
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
     headers: buildHeaders(options),
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : isFormData(options.body)
+          ? options.body
+          : JSON.stringify(options.body),
     signal: options.signal,
   });
 
@@ -148,6 +183,13 @@ export async function loginUser(payload: LoginInput): Promise<AuthPayload> {
   });
 }
 
+export async function loginWithGoogle(payload: GoogleAuthInput): Promise<AuthPayload> {
+  return requestJson<AuthPayload>('/auth/google', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 export async function fetchCurrentUser(token: string, signal?: AbortSignal): Promise<ApiUser> {
   return requestJson<ApiUser>('/auth/me', {
     token,
@@ -155,8 +197,36 @@ export async function fetchCurrentUser(token: string, signal?: AbortSignal): Pro
   });
 }
 
-export async function fetchDashboardData(token: string, signal?: AbortSignal): Promise<DashboardApiData> {
-  return requestJson<DashboardApiData>('/dashboard', {
+export async function fetchDashboardData(
+  token: string,
+  period: MonthYearFilter,
+  search?: string,
+  signal?: AbortSignal,
+): Promise<DashboardApiData> {
+  const queryString = buildQueryString({
+    month: period.month,
+    year: period.year,
+    search: search?.trim() || undefined,
+  });
+
+  return requestJson<DashboardApiData>(`/dashboard${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchExpenseCategories(
+  token: string,
+  signal?: AbortSignal,
+): Promise<ApiExpenseCategory[]> {
+  return requestJson<ApiExpenseCategory[]>('/expense-categories', {
+    token,
+    signal,
+  });
+}
+
+export async function fetchWallets(token: string, signal?: AbortSignal): Promise<ApiWallet[]> {
+  return requestJson<ApiWallet[]>('/wallets', {
     token,
     signal,
   });
@@ -170,5 +240,185 @@ export async function createTransaction(
     method: 'POST',
     token,
     body: payload,
+  });
+}
+
+export async function updateTransaction(
+  token: string,
+  transactionId: string,
+  payload: UpdateTransactionInput,
+): Promise<ApiTransaction> {
+  return requestJson<ApiTransaction>(`/transactions/${transactionId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteTransaction(
+  token: string,
+  transactionId: string,
+): Promise<ApiTransaction> {
+  return requestJson<ApiTransaction>(`/transactions/${transactionId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function importTransactionsCsv(
+  token: string,
+  payload: ImportTransactionsInput,
+  signal?: AbortSignal,
+): Promise<ImportTransactionsResult> {
+  const formData = new FormData();
+  formData.set('walletId', payload.walletId);
+  formData.set('file', payload.file);
+
+  return requestJson<ImportTransactionsResult>('/transactions/import', {
+    method: 'POST',
+    token,
+    body: formData,
+    signal,
+  });
+}
+
+export async function createWallet(token: string, payload: CreateWalletInput): Promise<ApiWallet> {
+  return requestJson<ApiWallet>('/wallets', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function fetchReports(token: string, signal?: AbortSignal): Promise<ApiReport[]> {
+  return requestJson<ApiReport[]>('/reports', {
+    token,
+    signal,
+  });
+}
+
+export async function fetchNotifications(
+  token: string,
+  signal?: AbortSignal,
+): Promise<ApiNotification[]> {
+  return requestJson<ApiNotification[]>('/notifications', {
+    token,
+    signal,
+  });
+}
+
+export async function markNotificationAsRead(
+  token: string,
+  notificationId: string,
+): Promise<ApiNotification> {
+  return requestJson<ApiNotification>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export async function createReport(token: string, payload: CreateReportInput): Promise<ApiReport> {
+  return requestJson<ApiReport>('/reports', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function updateWallet(
+  token: string,
+  walletId: string,
+  payload: UpdateWalletInput,
+): Promise<ApiWallet> {
+  return requestJson<ApiWallet>(`/wallets/${walletId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteWallet(token: string, walletId: string): Promise<ApiWallet> {
+  return requestJson<ApiWallet>(`/wallets/${walletId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function fetchTransactions(
+  token: string,
+  period: MonthYearFilter,
+  search?: string,
+  signal?: AbortSignal,
+): Promise<ApiTransaction[]> {
+  const queryString = buildQueryString({
+    month: period.month,
+    year: period.year,
+    search: search?.trim() || undefined,
+  });
+
+  return requestJson<ApiTransaction[]>(`/transactions${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchBudgets(
+  token: string,
+  period: MonthYearFilter,
+  signal?: AbortSignal,
+): Promise<BudgetOverview> {
+  const queryString = buildQueryString({
+    month: period.month,
+    year: period.year,
+  });
+
+  return requestJson<BudgetOverview>(`/budgets${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function createBudget(token: string, payload: CreateBudgetInput): Promise<ApiBudget> {
+  return requestJson<ApiBudget>('/budgets', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function createExpenseCategory(
+  token: string,
+  payload: CreateExpenseCategoryInput,
+): Promise<ApiExpenseCategory> {
+  return requestJson<ApiExpenseCategory>('/expense-categories', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteExpenseCategory(
+  token: string,
+  categoryId: string,
+): Promise<ApiExpenseCategory> {
+  return requestJson<ApiExpenseCategory>(`/expense-categories/${categoryId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function fetchHomeInsights(
+  token: string,
+  period: MonthYearFilter,
+  signal?: AbortSignal,
+): Promise<HomeInsightsResponse> {
+  const queryString = buildQueryString({
+    month: period.month,
+    year: period.year,
+  });
+
+  return requestJson<HomeInsightsResponse>(`/home/insights${queryString}`, {
+    token,
+    signal,
   });
 }

@@ -1,8 +1,12 @@
 import { app } from './app.js';
-import { env } from './config/env.js';
+import { startReportsWorker } from './workers/reports.worker.js';
+const PORT = Number(process.env.PORT || 4010);
+const safePort = Number.isFinite(PORT) && PORT > 0 ? PORT : 4010;
 
-const host = '0.0.0.0';
+app.listen(safePort, '0.0.0.0', () => {
+  console.log(`API a correr em http://0.0.0.0:${safePort}`);
+});
 
-app.listen(env.port, host, () => {
-  console.log(`API a correr em http://${host}:${env.port}`);
+void startReportsWorker().catch((error) => {
+  console.error('[reports-worker] failed to start', error);
 });

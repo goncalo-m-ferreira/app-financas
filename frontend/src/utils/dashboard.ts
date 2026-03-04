@@ -104,7 +104,7 @@ function buildTransactionItem(transaction: ApiTransaction, currency: string): Tr
     amountValue: signedAmount,
     badgeLabel,
     badgeColor,
-    accountLabel: ACCOUNT_LABELS[hashSeed % ACCOUNT_LABELS.length],
+    accountLabel: transaction.wallet?.name ?? ACCOUNT_LABELS[hashSeed % ACCOUNT_LABELS.length],
     avatarLabel: merchantLabel.slice(0, 1).toUpperCase(),
     avatarColor: AVATAR_PALETTE[hashSeed % AVATAR_PALETTE.length],
     iconColor: normalizeHexColor(transaction.category?.color, '#94a3b8'),

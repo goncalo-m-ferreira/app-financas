@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import {
-  createMyTransactionController,
+  createMyExpenseCategoryController,
+  deleteMyExpenseCategoryController,
   getDashboardController,
   listMyExpenseCategoriesController,
-  listMyTransactionsController,
 } from '../controllers/dashboard.controller.js';
 import { requireAuth } from '../middlewares/auth.js';
 
@@ -13,7 +13,7 @@ dashboardRouter.use(requireAuth);
 
 dashboardRouter.get('/dashboard', getDashboardController);
 dashboardRouter.get('/expense-categories', listMyExpenseCategoriesController);
-dashboardRouter.get('/transactions', listMyTransactionsController);
-dashboardRouter.post('/transactions', createMyTransactionController);
+dashboardRouter.post('/expense-categories', createMyExpenseCategoryController);
+dashboardRouter.delete('/expense-categories/:categoryId', deleteMyExpenseCategoryController);
 
 export { dashboardRouter };

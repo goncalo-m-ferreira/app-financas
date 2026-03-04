@@ -48,7 +48,7 @@ export function ChartCards({
           <span className="text-sm text-slate-500 dark:text-slate-400">Expenses by category</span>
         </header>
 
-        <div className="h-[220px] rounded-lg bg-slate-50 p-2 dark:bg-slate-950">
+        <div className="w-full h-64 min-h-[250px] rounded-lg bg-slate-50 p-2 dark:bg-slate-950">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={expenseByCategory} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -82,7 +82,7 @@ export function ChartCards({
           <span className="text-sm text-slate-500 dark:text-slate-400">Balance evolution</span>
         </header>
 
-        <div className="h-[220px] rounded-lg bg-slate-50 p-2 dark:bg-slate-950">
+        <div className="w-full h-64 min-h-[250px] rounded-lg bg-slate-50 p-2 dark:bg-slate-950">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={balanceTrend} margin={{ top: 16, right: 14, left: 2, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />

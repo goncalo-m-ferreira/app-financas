@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ApiClientError } from '../services/api';
@@ -10,7 +11,7 @@ type AuthPageProps = {
 };
 
 export function AuthPage({ mode }: AuthPageProps): JSX.Element {
-  const { isAuthenticated, isInitializing, login, register } = useAuth();
+  const { isAuthenticated, isInitializing, login, loginWithGoogleCredential, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [name, setName] = useState<string>('');
@@ -18,6 +19,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
   const [password, setPassword] = useState<string>('');
   const [defaultCurrency, setDefaultCurrency] = useState<string>('CHF');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const isRegisterMode = mode === 'register';
@@ -29,11 +31,11 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
 
   const redirectPath = useMemo(() => {
     const state = location.state as { from?: { pathname?: string } } | null;
-    return state?.from?.pathname ?? '/dashboard';
+    return state?.from?.pathname ?? '/';
   }, [location.state]);
 
   if (!isInitializing && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -67,6 +69,31 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleGoogleSuccess(response: CredentialResponse): Promise<void> {
+    if (!response.credential) {
+      setErrorMessage('Credencial Google inválida. Tenta novamente.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsGoogleSubmitting(true);
+
+    try {
+      await loginWithGoogleCredential(response.credential);
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Falha inesperada no login Google.');
+      }
+    } finally {
+      setIsGoogleSubmitting(false);
     }
   }
 
@@ -139,6 +166,28 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
             {isSubmitting ? 'A processar...' : submitLabel}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">OR</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <div className="flex min-h-[40px] justify-center">
+          {isGoogleSubmitting ? (
+            <p className="text-sm text-slate-600">A processar login Google...</p>
+          ) : (
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                void handleGoogleSuccess(credentialResponse);
+              }}
+              onError={() => {
+                setErrorMessage('Falha no login Google. Tenta novamente.');
+              }}
+              text={isRegisterMode ? 'signup_with' : 'signin_with'}
+            />
+          )}
+        </div>
 
         <p className="mt-5 text-sm text-slate-600">
           {alternateLabel}{' '}

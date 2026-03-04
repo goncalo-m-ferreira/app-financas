@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import {
   optionalDateQuerySchema,
+  optionalMonthQuerySchema,
   optionalNumberQuerySchema,
+  optionalSearchQuerySchema,
+  optionalYearQuerySchema,
   paginationQuerySchema,
   uuidSchema,
 } from './common.schemas.js';
@@ -17,14 +20,21 @@ export const transactionParamSchema = z.object({
   transactionId: uuidSchema,
 });
 
+export const authTransactionIdParamSchema = z.object({
+  id: uuidSchema,
+});
+
 export const listTransactionsQuerySchema = paginationQuerySchema
   .extend({
+    month: optionalMonthQuerySchema,
+    year: optionalYearQuerySchema,
     type: transactionTypeSchema.optional(),
     categoryId: uuidSchema.optional(),
     from: optionalDateQuerySchema,
     to: optionalDateQuerySchema,
     minAmount: optionalNumberQuerySchema,
     maxAmount: optionalNumberQuerySchema,
+    search: optionalSearchQuerySchema,
   })
   .refine(
     (data) =>
@@ -48,6 +58,7 @@ export const createTransactionBodySchema = z
     description: z.string().trim().max(255).optional(),
     transactionDate: z.coerce.date(),
     categoryId: uuidSchema.optional(),
+    walletId: uuidSchema,
   })
   .refine((data) => data.type !== 'EXPENSE' || Boolean(data.categoryId), {
     message: 'categoryId é obrigatório para transações do tipo EXPENSE.',
@@ -61,7 +72,12 @@ export const updateTransactionBodySchema = z
     description: z.string().trim().max(255).nullable().optional(),
     transactionDate: z.coerce.date().optional(),
     categoryId: uuidSchema.nullable().optional(),
+    walletId: uuidSchema.nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'É necessário enviar pelo menos um campo para atualização.',
   });
+
+export const importTransactionsBodySchema = z.object({
+  walletId: uuidSchema,
+});

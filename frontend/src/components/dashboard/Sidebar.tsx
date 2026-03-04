@@ -1,38 +1,38 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useNotifications } from '../../context/NotificationContext';
 
 type NavItem = {
+  id: string;
   label: string;
   icon: ReactNode;
-  active?: boolean;
+  href?: string;
   badge?: string;
   children?: string[];
 };
 
 const primaryItems: NavItem[] = [
-  { label: 'Home', icon: <DotIcon /> },
-  { label: 'Assets & Investments', icon: <PieIcon />, active: true },
-  {
-    label: 'Accounts & Cards',
-    icon: <CardIcon />,
-    children: ['Personal CHF', 'Mastercard 1491', 'VISA 9091', 'AmEx 7404'],
-  },
-  { label: 'Budget', icon: <WalletIcon />, badge: '2' },
-  { label: 'Payments', icon: <ArrowIcon /> },
-  { label: 'Markets & Trading', icon: <ChartIcon /> },
-  { label: 'Mailbox', icon: <MailIcon />, badge: '3' },
+  { id: 'home', label: 'Home', icon: <DotIcon />, href: '/' },
+  { id: 'dashboard', label: 'Assets & Investments', icon: <PieIcon />, href: '/dashboard' },
+  { id: 'accounts', label: 'Accounts & Cards', icon: <CardIcon />, href: '/accounts' },
+  { id: 'budgets', label: 'Budget', icon: <WalletIcon />, href: '/budgets' },
+  { id: 'reports', label: 'Reports', icon: <ReportIcon />, href: '/reports' },
+  { id: 'mailbox', label: 'Mailbox', icon: <MailIcon />, href: '/mailbox' },
 ];
 
 const secondaryItems: NavItem[] = [
-  { label: 'Settings', icon: <GearIcon /> },
-  { label: 'Logout', icon: <ExitIcon /> },
+  { id: 'settings', label: 'Settings', icon: <GearIcon />, href: '/settings' },
 ];
 
 type SidebarProps = {
   isDarkMode: boolean;
   onToggleTheme: () => void;
+  activeItem: 'home' | 'dashboard' | 'accounts' | 'budgets' | 'reports' | 'mailbox' | 'settings';
 };
 
-export function Sidebar({ isDarkMode, onToggleTheme }: SidebarProps): JSX.Element {
+export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps): JSX.Element {
+  const { unreadCount } = useNotifications();
+
   return (
     <aside className="border-b border-slate-200 bg-white px-5 py-6 dark:border-slate-700 dark:bg-slate-900 lg:h-screen lg:border-b-0 lg:border-r">
       <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
@@ -42,30 +42,51 @@ export function Sidebar({ isDarkMode, onToggleTheme }: SidebarProps): JSX.Elemen
       <nav aria-label="Main navigation" className="space-y-1">
         {primaryItems.map((item) => (
           <div key={item.label}>
-            <button
-              type="button"
-              className={[
-                'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
-                item.active
-                  ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
-              ].join(' ')}
-              aria-current={item.active ? 'page' : undefined}
-            >
-              <span
-                className={
-                  item.active ? 'text-white dark:text-slate-900' : 'text-slate-400 dark:text-slate-500'
-                }
-              >
-                {item.icon}
-              </span>
-              <span className="truncate">{item.label}</span>
-              {item.badge ? (
-                <span className="ml-auto rounded bg-slate-200 px-1.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-100">
-                  {item.badge}
-                </span>
-              ) : null}
-            </button>
+            {(() => {
+              const badgeValue = item.id === 'mailbox' ? (unreadCount > 0 ? String(unreadCount) : undefined) : item.badge;
+
+              return item.href ? (
+                <Link
+                  to={item.href}
+                  className={[
+                    'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
+                    item.id === activeItem
+                      ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                  ].join(' ')}
+                  aria-current={item.id === activeItem ? 'page' : undefined}
+                >
+                  <span
+                    className={
+                      item.id === activeItem
+                        ? 'text-white dark:text-slate-900'
+                        : 'text-slate-400 dark:text-slate-500'
+                    }
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                  {badgeValue ? (
+                    <span className="ml-auto rounded bg-slate-200 px-1.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                      {badgeValue}
+                    </span>
+                  ) : null}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                >
+                  <span className="text-slate-400 dark:text-slate-500">{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
+                  {badgeValue ? (
+                    <span className="ml-auto rounded bg-slate-200 px-1.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                      {badgeValue}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })()}
 
             {item.children ? (
               <ul
@@ -85,14 +106,39 @@ export function Sidebar({ isDarkMode, onToggleTheme }: SidebarProps): JSX.Elemen
 
       <div className="mt-10 space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
         {secondaryItems.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            <span className="text-slate-400 dark:text-slate-500">{item.icon}</span>
-            {item.label}
-          </button>
+          item.href ? (
+            <Link
+              key={item.label}
+              to={item.href}
+              className={[
+                'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
+                item.id === activeItem
+                  ? 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-900'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+              ].join(' ')}
+              aria-current={item.id === activeItem ? 'page' : undefined}
+            >
+              <span
+                className={
+                  item.id === activeItem
+                    ? 'text-white dark:text-slate-900'
+                    : 'text-slate-400 dark:text-slate-500'
+                }
+              >
+                {item.icon}
+              </span>
+              {item.label}
+            </Link>
+          ) : (
+            <button
+              key={item.label}
+              type="button"
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              <span className="text-slate-400 dark:text-slate-500">{item.icon}</span>
+              {item.label}
+            </button>
+          )
         ))}
       </div>
 
@@ -169,18 +215,11 @@ function WalletIcon(): JSX.Element {
   );
 }
 
-function ArrowIcon(): JSX.Element {
+function ReportIcon(): JSX.Element {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChartIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 15h4M5 10h8M5 5h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 3h8l4 4v14H4V3h4z" stroke="currentColor" strokeWidth="2" />
+      <path d="M16 3v4h4M8 13h8M8 17h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -199,19 +238,6 @@ function GearIcon(): JSX.Element {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
       <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-
-function ExitIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M9 5H5v14h4M14 8l5 4-5 4M19 12H9"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }

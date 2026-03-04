@@ -17,3 +17,7 @@ export const loginBodySchema = z.object({
   email: z.string().trim().email('email inválido.').toLowerCase(),
   password: z.string().min(1, 'password é obrigatório.'),
 });
+
+export const googleAuthBodySchema = z.object({
+  credential: z.string().trim().min(1, 'credential é obrigatório.'),
+});

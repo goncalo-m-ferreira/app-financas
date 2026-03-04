@@ -1,0 +1,416 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Sidebar } from '../components/dashboard/Sidebar';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { ApiClientError, createWallet, deleteWallet, fetchWallets } from '../services/api';
+import type { ApiWallet } from '../types/finance';
+
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6})$/;
+const DEFAULT_WALLET_COLOR = '#0ea5e9';
+
+function formatCurrency(value: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+    .format(value)
+    .replace(/,/g, "'")
+    .concat(` ${currency}`);
+}
+
+function parseHexColor(value: string | null): string {
+  if (typeof value === 'string' && HEX_COLOR_REGEX.test(value.trim())) {
+    return value.trim();
+  }
+
+  return DEFAULT_WALLET_COLOR;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = parseHexColor(hex);
+  const red = Number.parseInt(normalized.slice(1, 3), 16);
+  const green = Number.parseInt(normalized.slice(3, 5), 16);
+  const blue = Number.parseInt(normalized.slice(5, 7), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function cardLast4(walletId: string): string {
+  const onlyDigits = walletId.replace(/\D/g, '');
+
+  if (onlyDigits.length >= 4) {
+    return onlyDigits.slice(-4).padStart(4, '0');
+  }
+
+  const checksum = [...walletId].reduce((value, char) => (value * 31 + char.charCodeAt(0)) % 10000, 0);
+  return String(checksum).padStart(4, '0');
+}
+
+export function AccountsCardsPage(): JSX.Element {
+  const { token, user } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
+  const [wallets, setWallets] = useState<ApiWallet[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [walletName, setWalletName] = useState<string>('');
+  const [walletColor, setWalletColor] = useState<string>(DEFAULT_WALLET_COLOR);
+  const [walletBalance, setWalletBalance] = useState<string>('0');
+  const [isCreatingWallet, setIsCreatingWallet] = useState<boolean>(false);
+  const [deletingWalletIds, setDeletingWalletIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    const tokenValue = token;
+    const controller = new AbortController();
+    let isMounted = true;
+
+    async function loadWallets(): Promise<void> {
+      try {
+        setLoading(true);
+        setErrorMessage(null);
+
+        const walletsData = await fetchWallets(tokenValue, controller.signal);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setWallets(walletsData);
+      } catch (error) {
+        if (!isMounted || controller.signal.aborted) {
+          return;
+        }
+
+        if (error instanceof ApiClientError) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        if (error instanceof Error) {
+          setErrorMessage(error.message);
+          return;
+        }
+
+        setErrorMessage('Unexpected error while loading accounts.');
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadWallets();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [token]);
+
+  const currency = user?.defaultCurrency ?? 'EUR';
+
+  const sortedWallets = useMemo(
+    () => [...wallets].sort((left, right) => left.name.localeCompare(right.name)),
+    [wallets],
+  );
+
+  function validateColor(value: string): boolean {
+    return HEX_COLOR_REGEX.test(value.trim());
+  }
+
+  async function handleCreateWallet(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setErrorMessage(null);
+
+    if (!token) {
+      setErrorMessage('Session expired. Please sign in again.');
+      return;
+    }
+
+    const trimmedName = walletName.trim();
+    const trimmedColor = walletColor.trim();
+    const parsedBalance = Number.parseFloat(walletBalance);
+
+    if (trimmedName.length < 2) {
+      setErrorMessage('Wallet name must be at least 2 characters.');
+      return;
+    }
+
+    if (!validateColor(trimmedColor)) {
+      setErrorMessage('Wallet color must use HEX format (#RRGGBB).');
+      return;
+    }
+
+    if (!Number.isFinite(parsedBalance) || parsedBalance < 0) {
+      setErrorMessage('Initial balance must be 0 or greater.');
+      return;
+    }
+
+    setIsCreatingWallet(true);
+
+    try {
+      const created = await createWallet(token, {
+        name: trimmedName,
+        color: trimmedColor,
+        balance: parsedBalance,
+      });
+
+      setWallets((current) => [...current, created]);
+      setWalletName('');
+      setWalletColor(DEFAULT_WALLET_COLOR);
+      setWalletBalance('0');
+      setIsModalOpen(false);
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Failed to create wallet.');
+      }
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  }
+
+  async function handleDeleteWallet(walletId: string): Promise<void> {
+    if (!token) {
+      setErrorMessage('Session expired. Please sign in again.');
+      return;
+    }
+
+    setErrorMessage(null);
+    setDeletingWalletIds((current) => new Set(current).add(walletId));
+
+    try {
+      await deleteWallet(token, walletId);
+      setWallets((current) => current.filter((wallet) => wallet.id !== walletId));
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        setErrorMessage(error.message);
+      } else if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Failed to delete wallet.');
+      }
+    } finally {
+      setDeletingWalletIds((current) => {
+        const next = new Set(current);
+        next.delete(walletId);
+        return next;
+      });
+    }
+  }
+
+  return (
+    <>
+      <div className="min-h-screen bg-[#eef0f1] p-3 dark:bg-[#020617] lg:p-5">
+        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[#0b1220] dark:shadow-[0_20px_55px_rgba(2,6,23,0.85)]">
+          <div className="lg:grid lg:grid-cols-[240px_1fr]">
+            <Sidebar isDarkMode={isDarkMode} onToggleTheme={toggleTheme} activeItem="accounts" />
+
+            <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
+              <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                      Accounts & Cards
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Manage all your wallets as modern debit and credit cards.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+                  >
+                    Add New Account
+                  </button>
+                </div>
+              </header>
+
+              {errorMessage ? (
+                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {errorMessage}
+                </p>
+              ) : null}
+
+              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                {loading ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts...</p>
+                ) : sortedWallets.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-950">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No accounts found.</p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Click "Add New Account" to create your first card.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {sortedWallets.map((wallet) => {
+                      const displayColor = parseHexColor(wallet.color);
+                      const parsedBalance = Number.parseFloat(wallet.balance);
+                      const balanceLabel = formatCurrency(Number.isFinite(parsedBalance) ? parsedBalance : 0, currency);
+                      const isDeleting = deletingWalletIds.has(wallet.id);
+
+                      return (
+                        <article
+                          key={wallet.id}
+                          className="relative overflow-hidden rounded-xl p-5 text-white shadow-[0_16px_30px_rgba(15,23,42,0.28)]"
+                          style={{
+                            backgroundImage: `linear-gradient(145deg, ${hexToRgba(displayColor, 0.98)} 0%, ${hexToRgba(displayColor, 0.72)} 45%, ${hexToRgba('#0f172a', 0.95)} 120%)`,
+                          }}
+                        >
+                          <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/20 blur-2xl" />
+                          <div className="relative z-10">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <CardChipIcon />
+                                <span className="rounded-full border border-white/35 bg-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
+                                  Debit
+                                </span>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteWallet(wallet.id)}
+                                disabled={isDeleting}
+                                className="rounded-md border border-white/35 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+                                aria-label={`Delete account ${wallet.name}`}
+                              >
+                                {isDeleting ? 'Removing...' : 'Delete'}
+                              </button>
+                            </div>
+
+                            <p className="mt-9 font-mono text-lg tracking-[0.25em] text-white/95">
+                              **** **** **** {cardLast4(wallet.id)}
+                            </p>
+
+                            <div className="mt-6 flex items-end justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Wallet</p>
+                                <p className="mt-1 truncate text-base font-semibold text-white">{wallet.name}</p>
+                              </div>
+
+                              <div className="text-right">
+                                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Balance</p>
+                                <p className="mt-1 text-xl font-semibold text-white">{balanceLabel}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      {isModalOpen ? (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-account-title"
+        >
+          <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="new-account-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Add New Account
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateWallet} className="grid gap-3 md:grid-cols-[1fr_180px_140px]">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</span>
+                <input
+                  value={walletName}
+                  onChange={(event) => setWalletName(event.target.value)}
+                  required
+                  maxLength={80}
+                  placeholder="e.g. Platinum Visa"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Color</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={validateColor(walletColor) ? walletColor : DEFAULT_WALLET_COLOR}
+                    onChange={(event) => setWalletColor(event.target.value)}
+                    aria-label="Choose account color"
+                    className="h-10 w-12 rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                  />
+                  <input
+                    value={walletColor}
+                    onChange={(event) => setWalletColor(event.target.value)}
+                    maxLength={7}
+                    placeholder="#0ea5e9"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  />
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Balance</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={walletBalance}
+                  onChange={(event) => setWalletBalance(event.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </label>
+
+              <div className="md:col-span-3 flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingWallet}
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isCreatingWallet ? 'Adding...' : 'Add Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function CardChipIcon(): JSX.Element {
+  return (
+    <svg width="28" height="22" viewBox="0 0 28 22" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="26" height="20" rx="4" fill="white" fillOpacity="0.24" />
+      <rect x="7" y="6" width="14" height="10" rx="2" fill="white" fillOpacity="0.35" />
+      <path d="M14 6v10M7 11h14" stroke="white" strokeOpacity="0.5" />
+    </svg>
+  );
+}

@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "concurrently -k \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:wsl": "bash -lc 'for port in 4010 5173; do fuser -k ${port}/tcp 2>/dev/null || true; done; PORT=4010 npm run dev'",
     "build": "npm run build -w backend && npm run build -w frontend",
     "lint": "npm run lint -w backend && npm run lint -w frontend",
     "db:generate": "npm run prisma:generate -w backend",

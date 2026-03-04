@@ -11,11 +11,12 @@ import {
   clearAuthToken,
   fetchCurrentUser,
   getStoredAuthToken,
+  loginWithGoogle,
   loginUser,
   registerUser,
   saveAuthToken,
 } from '../services/api';
-import type { ApiUser, LoginInput, RegisterInput } from '../types/finance';
+import type { ApiUser, AuthPayload, LoginInput, RegisterInput } from '../types/finance';
 
 type AuthContextValue = {
   token: string | null;
@@ -23,6 +24,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isInitializing: boolean;
   login: (payload: LoginInput) => Promise<void>;
+  loginWithGoogleCredential: (credential: string) => Promise<void>;
   register: (payload: RegisterInput) => Promise<void>;
   logout: () => void;
 };
@@ -74,19 +76,29 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     };
   }, []);
 
-  const login = useCallback(async (payload: LoginInput) => {
-    const auth = await loginUser(payload);
+  const applyAuthenticatedSession = useCallback((auth: AuthPayload) => {
     saveAuthToken(auth.token);
     setToken(auth.token);
     setUser(auth.user);
   }, []);
 
+  const login = useCallback(async (payload: LoginInput) => {
+    const auth = await loginUser(payload);
+    applyAuthenticatedSession(auth);
+  }, [applyAuthenticatedSession]);
+
+  const loginWithGoogleCredential = useCallback(
+    async (credential: string) => {
+      const auth = await loginWithGoogle({ credential });
+      applyAuthenticatedSession(auth);
+    },
+    [applyAuthenticatedSession],
+  );
+
   const register = useCallback(async (payload: RegisterInput) => {
     const auth = await registerUser(payload);
-    saveAuthToken(auth.token);
-    setToken(auth.token);
-    setUser(auth.user);
-  }, []);
+    applyAuthenticatedSession(auth);
+  }, [applyAuthenticatedSession]);
 
   const logout = useCallback(() => {
     clearAuthToken();
@@ -101,10 +113,11 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
       isAuthenticated: Boolean(token),
       isInitializing,
       login,
+      loginWithGoogleCredential,
       register,
       logout,
     }),
-    [isInitializing, login, logout, register, token, user],
+    [isInitializing, login, loginWithGoogleCredential, logout, register, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

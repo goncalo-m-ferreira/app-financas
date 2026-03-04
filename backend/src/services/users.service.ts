@@ -23,6 +23,8 @@ function toSafeUser(user: User): SafeUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    googleId: user.googleId,
+    avatarUrl: user.avatarUrl,
     defaultCurrency: user.defaultCurrency,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,

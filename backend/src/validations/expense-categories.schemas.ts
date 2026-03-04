@@ -15,6 +15,10 @@ export const categoryParamSchema = z.object({
   categoryId: uuidSchema,
 });
 
+export const authCategoryParamSchema = z.object({
+  categoryId: uuidSchema,
+});
+
 export const createExpenseCategoryBodySchema = z.object({
   name: z.string().trim().min(2, 'name deve ter pelo menos 2 caracteres.').max(80),
   color: colorSchema.optional(),

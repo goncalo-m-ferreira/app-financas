@@ -12,16 +12,34 @@ enum TransactionType {
   EXPENSE
 }
 
+enum ReportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationType {
+  BUDGET
+  SYSTEM
+  REPORT
+}
+
 model User {
   id              String            @id @default(uuid())
   name            String
   email           String            @unique
-  passwordHash    String            @map("password_hash")
+  passwordHash    String?           @map("password_hash")
+  googleId        String?           @unique @map("google_id")
+  avatarUrl       String?           @map("avatar_url")
   defaultCurrency String            @default("EUR") @map("default_currency")
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   categories      ExpenseCategory[]
   transactions    Transaction[]
+  budgets         Budget[]
+  wallets         Wallet[]
+  reports         Report[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -36,6 +54,7 @@ model ExpenseCategory {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[] @relation("CategoryTransactions")
+  budgets      Budget[]
 
   @@unique([userId, name], map: "expense_categories_user_id_name_key")
   @@unique([userId, id], map: "expense_categories_user_id_id_key")
@@ -46,6 +65,7 @@ model Transaction {
   id              String           @id @default(uuid())
   userId          String           @map("user_id")
   categoryId      String?          @map("category_id")
+  walletId        String?          @map("wallet_id")
   type            TransactionType
   amount          Decimal
   description     String?
@@ -54,8 +74,70 @@ model Transaction {
   updatedAt       DateTime         @updatedAt @map("updated_at")
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   category        ExpenseCategory? @relation("CategoryTransactions", fields: [userId, categoryId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  wallet          Wallet?          @relation("WalletTransactions", fields: [userId, walletId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([userId, transactionDate], map: "transactions_user_id_transaction_date_idx")
   @@index([userId, categoryId, transactionDate], map: "transactions_user_id_category_id_transaction_date_idx")
+  @@index([userId, walletId, transactionDate], map: "transactions_user_id_wallet_id_transaction_date_idx")
   @@map("transactions")
+}
+
+model Budget {
+  id         String          @id @default(uuid())
+  userId     String          @map("user_id")
+  categoryId String          @map("category_id")
+  amount     Decimal
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   ExpenseCategory @relation(fields: [userId, categoryId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, categoryId], map: "budgets_user_id_category_id_key")
+  @@index([userId], map: "budgets_user_id_idx")
+  @@map("budgets")
+}
+
+model Wallet {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  name         String
+  balance      Decimal       @default(0)
+  color        String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[] @relation("WalletTransactions")
+
+  @@unique([userId, name], map: "wallets_user_id_name_key")
+  @@unique([userId, id], map: "wallets_user_id_id_key")
+  @@index([userId], map: "wallets_user_id_idx")
+  @@map("wallets")
+}
+
+model Report {
+  id        String       @id @default(uuid())
+  userId    String       @map("user_id")
+  name      String
+  status    ReportStatus @default(PENDING)
+  fileUrl   String?      @map("file_url")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "reports_user_id_idx")
+  @@map("reports")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt], map: "notifications_user_id_is_read_created_at_idx")
+  @@map("notifications")
 }
