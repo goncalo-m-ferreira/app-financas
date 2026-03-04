@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "DATABASE_URL=${DATABASE_URL:-file:../prisma/dev.db} tsx src/server.ts",
+    "dev": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" tsx src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\"",
     "prisma:generate": "prisma generate --schema ../prisma/schema.prisma",
-    "prisma:migrate": "DATABASE_URL=${DATABASE_URL:-file:../prisma/dev.db} prisma migrate dev --schema ../prisma/schema.prisma",
-    "prisma:seed": "DATABASE_URL=${DATABASE_URL:-file:../prisma/dev.db} tsx ../prisma/seed.ts"
+    "prisma:push": "prisma db push --schema ../prisma/schema.prisma",
+    "prisma:migrate": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" prisma migrate dev --schema ../prisma/schema.prisma",
+    "prisma:seed": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" tsx ../prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

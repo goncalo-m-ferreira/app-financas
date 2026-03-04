@@ -1,6 +1,4 @@
 import dotenv from 'dotenv';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 dotenv.config();
 
@@ -12,27 +10,8 @@ const reportsQueueName = process.env.REPORTS_QUEUE_NAME ?? 'pdf_reports_queue';
 const googleClientId =
   process.env.GOOGLE_CLIENT_ID ??
   '84485673553-br2mf821lbd9qfpqmjqlkm3c54g4uijj.apps.googleusercontent.com';
-const fallbackDatabaseUrl = 'file:../prisma/dev.db';
-
-function normalizeDatabaseUrl(rawUrl: string): string {
-  if (!rawUrl.startsWith('file:')) {
-    return rawUrl;
-  }
-
-  const sqlitePath = rawUrl.slice('file:'.length);
-
-  if (sqlitePath.startsWith('/')) {
-    return rawUrl;
-  }
-
-  const configDir = path.dirname(fileURLToPath(import.meta.url));
-  const backendRoot = path.resolve(configDir, '..', '..');
-  const absoluteSqlitePath = path.resolve(backendRoot, sqlitePath);
-
-  return `file:${absoluteSqlitePath}`;
-}
-
-const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL ?? fallbackDatabaseUrl);
+const fallbackDatabaseUrl = 'postgresql://postgres:postgres@localhost:5432/app_financas?schema=public';
+const databaseUrl = process.env.DATABASE_URL ?? fallbackDatabaseUrl;
 process.env.DATABASE_URL = databaseUrl;
 
 export const env = {
