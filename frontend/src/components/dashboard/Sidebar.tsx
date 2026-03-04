@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
 
 type NavItem = {
@@ -20,9 +20,7 @@ const primaryItems: NavItem[] = [
   { id: 'mailbox', label: 'Mailbox', icon: <MailIcon />, href: '/mailbox' },
 ];
 
-const secondaryItems: NavItem[] = [
-  { id: 'settings', label: 'Settings', icon: <GearIcon />, href: '/settings' },
-];
+const secondaryItems: NavItem[] = [{ id: 'settings', label: 'Settings', icon: <GearIcon />, href: '/settings' }];
 
 type SidebarProps = {
   isDarkMode: boolean;
@@ -30,24 +28,39 @@ type SidebarProps = {
   activeItem: 'home' | 'dashboard' | 'accounts' | 'budgets' | 'reports' | 'mailbox' | 'settings';
 };
 
-export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps): JSX.Element {
-  const { unreadCount } = useNotifications();
+type SidebarContentProps = SidebarProps & {
+  unreadCount: number;
+  onNavigate?: () => void;
+  showTopMark?: boolean;
+};
 
+function SidebarContent({
+  isDarkMode,
+  onToggleTheme,
+  activeItem,
+  unreadCount,
+  onNavigate,
+  showTopMark = false,
+}: SidebarContentProps): JSX.Element {
   return (
-    <aside className="border-b border-slate-200 bg-white px-5 py-6 dark:border-slate-700 dark:bg-slate-900 lg:h-screen lg:border-b-0 lg:border-r">
-      <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
-        <PlusMarkIcon />
-      </div>
+    <>
+      {showTopMark ? (
+        <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+          <PlusMarkIcon />
+        </div>
+      ) : null}
 
       <nav aria-label="Main navigation" className="space-y-1">
         {primaryItems.map((item) => (
           <div key={item.label}>
             {(() => {
-              const badgeValue = item.id === 'mailbox' ? (unreadCount > 0 ? String(unreadCount) : undefined) : item.badge;
+              const badgeValue =
+                item.id === 'mailbox' ? (unreadCount > 0 ? String(unreadCount) : undefined) : item.badge;
 
               return item.href ? (
                 <Link
                   to={item.href}
+                  onClick={onNavigate}
                   className={[
                     'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
                     item.id === activeItem
@@ -105,11 +118,12 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
       </nav>
 
       <div className="mt-10 space-y-1 border-t border-slate-100 pt-6 dark:border-slate-800">
-        {secondaryItems.map((item) => (
+        {secondaryItems.map((item) =>
           item.href ? (
             <Link
               key={item.label}
               to={item.href}
+              onClick={onNavigate}
               className={[
                 'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition',
                 item.id === activeItem
@@ -138,8 +152,8 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
               <span className="text-slate-400 dark:text-slate-500">{item.icon}</span>
               {item.label}
             </button>
-          )
-        ))}
+          ),
+        )}
       </div>
 
       <button
@@ -148,12 +162,7 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
         className="mt-8 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         <span>Switch to dark</span>
-        <span
-          className={[
-            'h-5 w-9 rounded-full p-0.5 transition',
-            isDarkMode ? 'bg-cyan-400' : 'bg-slate-900',
-          ].join(' ')}
-        >
+        <span className={['h-5 w-9 rounded-full p-0.5 transition', isDarkMode ? 'bg-cyan-400' : 'bg-slate-900'].join(' ')}>
           <span
             className={[
               'block h-4 w-4 rounded-full bg-white transition',
@@ -162,7 +171,125 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
           />
         </span>
       </button>
-    </aside>
+    </>
+  );
+}
+
+export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps): JSX.Element {
+  const { unreadCount } = useNotifications();
+  const location = useLocation();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location.pathname, location.search, location.hash]);
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) {
+      return;
+    }
+
+    function handleKeydown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        setIsMobileSidebarOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [isMobileSidebarOpen]);
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileSidebarOpen]);
+
+  return (
+    <>
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 lg:hidden">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+          <PlusMarkIcon />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsMobileSidebarOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={isMobileSidebarOpen}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <MenuIcon />
+        </button>
+      </header>
+
+      <div
+        className={[
+          'fixed inset-0 z-40 transition-opacity duration-200 lg:hidden',
+          isMobileSidebarOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+        ].join(' ')}
+        aria-hidden={!isMobileSidebarOpen}
+      >
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="absolute inset-0 bg-slate-950/45"
+        />
+
+        <aside
+          className={[
+            'absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-slate-200 bg-white px-5 py-6 shadow-xl transition-transform duration-200 dark:border-slate-700 dark:bg-slate-900',
+            isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
+          ].join(' ')}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+              <PlusMarkIcon />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close navigation menu"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          <SidebarContent
+            isDarkMode={isDarkMode}
+            onToggleTheme={onToggleTheme}
+            activeItem={activeItem}
+            unreadCount={unreadCount}
+            onNavigate={() => setIsMobileSidebarOpen(false)}
+          />
+        </aside>
+      </div>
+
+      <aside className="hidden border-r border-slate-200 bg-white px-5 py-6 dark:border-slate-700 dark:bg-slate-900 lg:block lg:h-screen">
+        <SidebarContent
+          isDarkMode={isDarkMode}
+          onToggleTheme={onToggleTheme}
+          activeItem={activeItem}
+          unreadCount={unreadCount}
+          showTopMark
+        />
+      </aside>
+    </>
   );
 }
 
@@ -176,6 +303,22 @@ function PlusMarkIcon(): JSX.Element {
         strokeLinecap="round"
         className="text-slate-900 dark:text-slate-100"
       />
+    </svg>
+  );
+}
+
+function MenuIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon(): JSX.Element {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
