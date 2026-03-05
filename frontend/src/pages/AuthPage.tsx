@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { SUPPORTED_CURRENCIES } from '../constants/currencies';
@@ -18,6 +18,9 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState<boolean>(false);
   const [defaultCurrency, setDefaultCurrency] = useState<string>('EUR');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState<boolean>(false);
@@ -35,6 +38,13 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
     return state?.from?.pathname ?? '/';
   }, [location.state]);
 
+  useEffect(() => {
+    setConfirmPassword('');
+    setIsPasswordVisible(false);
+    setIsConfirmPasswordVisible(false);
+    setErrorMessage(null);
+  }, [mode]);
+
   if (!isInitializing && isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -43,6 +53,12 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
     event.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
+
+    if (isRegisterMode && password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (isRegisterMode) {
@@ -123,6 +139,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
               required
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
             />
@@ -130,34 +147,72 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={8}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
-            />
+            <div className="relative">
+              <input
+                type={isPasswordVisible ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
+                required
+                minLength={8}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
+              />
+              <button
+                type="button"
+                onClick={() => setIsPasswordVisible((current) => !current)}
+                aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+                className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded p-1 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                {isPasswordVisible ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </label>
 
           {isRegisterMode ? (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Default Currency
-              </span>
-              <select
-                value={defaultCurrency}
-                onChange={(event) => setDefaultCurrency(event.target.value)}
-                required
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
-              >
-                {SUPPORTED_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Confirm Password
+                </span>
+                <div className="relative">
+                  <input
+                    type={isConfirmPasswordVisible ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmPasswordVisible((current) => !current)}
+                    aria-label={isConfirmPasswordVisible ? 'Hide confirm password' : 'Show confirm password'}
+                    className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded p-1 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    {isConfirmPasswordVisible ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Default Currency
+                </span>
+                <select
+                  value={defaultCurrency}
+                  onChange={(event) => setDefaultCurrency(event.target.value)}
+                  required
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
+                >
+                  {SUPPORTED_CURRENCIES.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           ) : null}
 
           {errorMessage ? (
@@ -208,6 +263,36 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
         </p>
       </section>
     </main>
+  );
+}
+
+function EyeIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function EyeOffIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 3 21 21M10.6 6.2A9.4 9.4 0 0 1 12 6c6 0 9.5 6 9.5 6a16.9 16.9 0 0 1-3.1 3.9M6.3 8.3A16.8 16.8 0 0 0 2.5 12s3.5 6 9.5 6c1.4 0 2.6-.3 3.7-.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9.9 9.9A3 3 0 0 0 14.1 14.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }
 
