@@ -5,18 +5,14 @@ import { useDebounce } from '../../hooks/useDebounce';
 
 type TopHeaderProps = {
   balanceLabel: string;
-  userName: string;
   onAddTransaction: () => void;
   onImportCsv: () => void;
-  onLogout: () => void;
 };
 
 export function TopHeader({
   balanceLabel,
-  userName,
   onAddTransaction,
   onImportCsv,
-  onLogout,
 }: TopHeaderProps): JSX.Element {
   const { searchQuery, setSearchQuery } = useSearch();
   const [searchInput, setSearchInput] = useState<string>(searchQuery);
@@ -79,12 +75,6 @@ export function TopHeader({
             <GridIcon />
           </button>
 
-          <span className="ml-2 text-sm font-medium text-slate-800 dark:text-slate-100">{userName}</span>
-
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-cyan-100 text-xs font-semibold text-cyan-700">
-            GM
-          </span>
-
           <button
             type="button"
             onClick={onAddTransaction}
@@ -100,14 +90,6 @@ export function TopHeader({
             className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Import CSV
-          </button>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            Logout
           </button>
         </div>
       </div>

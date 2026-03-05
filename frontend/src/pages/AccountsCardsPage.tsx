@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Sidebar } from '../components/dashboard/Sidebar';
+import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { ApiClientError, createWallet, deleteWallet, fetchWallets } from '../services/api';
 import type { ApiWallet } from '../types/finance';
 
@@ -48,7 +47,6 @@ function cardLast4(walletId: string): string {
 
 export function AccountsCardsPage(): JSX.Element {
   const { token, user } = useAuth();
-  const { isDarkMode, toggleTheme } = useTheme();
   const [wallets, setWallets] = useState<ApiWallet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -208,112 +206,104 @@ export function AccountsCardsPage(): JSX.Element {
 
   return (
     <>
-      <div className="min-h-screen bg-[#eef0f1] p-3 dark:bg-[#020617] lg:p-5">
-        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[#0b1220] dark:shadow-[0_20px_55px_rgba(2,6,23,0.85)]">
-          <div className="lg:grid lg:grid-cols-[240px_1fr]">
-            <Sidebar isDarkMode={isDarkMode} onToggleTheme={toggleTheme} activeItem="accounts" />
+      <AppShell activeItem="accounts">
+        <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                Accounts & Cards
+              </h1>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Manage all your wallets as modern debit and credit cards.
+              </p>
+            </div>
 
-            <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
-              <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                      Accounts & Cards
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Manage all your wallets as modern debit and credit cards.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
-                  >
-                    Add New Account
-                  </button>
-                </div>
-              </header>
-
-              {errorMessage ? (
-                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                  {errorMessage}
-                </p>
-              ) : null}
-
-              <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                {loading ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts...</p>
-                ) : sortedWallets.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-950">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No accounts found.</p>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Click "Add New Account" to create your first card.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {sortedWallets.map((wallet) => {
-                      const displayColor = parseHexColor(wallet.color);
-                      const parsedBalance = Number.parseFloat(wallet.balance);
-                      const balanceLabel = formatCurrency(Number.isFinite(parsedBalance) ? parsedBalance : 0, currency);
-                      const isDeleting = deletingWalletIds.has(wallet.id);
-
-                      return (
-                        <article
-                          key={wallet.id}
-                          className="relative overflow-hidden rounded-xl p-5 text-white shadow-[0_16px_30px_rgba(15,23,42,0.28)]"
-                          style={{
-                            backgroundImage: `linear-gradient(145deg, ${hexToRgba(displayColor, 0.98)} 0%, ${hexToRgba(displayColor, 0.72)} 45%, ${hexToRgba('#0f172a', 0.95)} 120%)`,
-                          }}
-                        >
-                          <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/20 blur-2xl" />
-                          <div className="relative z-10">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <CardChipIcon />
-                                <span className="rounded-full border border-white/35 bg-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
-                                  Debit
-                                </span>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => void handleDeleteWallet(wallet.id)}
-                                disabled={isDeleting}
-                                className="rounded-md border border-white/35 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
-                                aria-label={`Delete account ${wallet.name}`}
-                              >
-                                {isDeleting ? 'Removing...' : 'Delete'}
-                              </button>
-                            </div>
-
-                            <p className="mt-9 font-mono text-lg tracking-[0.25em] text-white/95">
-                              **** **** **** {cardLast4(wallet.id)}
-                            </p>
-
-                            <div className="mt-6 flex items-end justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Wallet</p>
-                                <p className="mt-1 truncate text-base font-semibold text-white">{wallet.name}</p>
-                              </div>
-
-                              <div className="text-right">
-                                <p className="text-xs uppercase tracking-[0.2em] text-white/70">Balance</p>
-                                <p className="mt-1 text-xl font-semibold text-white">{balanceLabel}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            </main>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+            >
+              Add New Account
+            </button>
           </div>
-        </div>
-      </div>
+        </header>
+
+        {errorMessage ? (
+          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {errorMessage}
+          </p>
+        ) : null}
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          {loading ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts...</p>
+          ) : sortedWallets.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-950">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No accounts found.</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Click "Add New Account" to create your first card.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {sortedWallets.map((wallet) => {
+                const displayColor = parseHexColor(wallet.color);
+                const parsedBalance = Number.parseFloat(wallet.balance);
+                const balanceLabel = formatCurrency(Number.isFinite(parsedBalance) ? parsedBalance : 0, currency);
+                const isDeleting = deletingWalletIds.has(wallet.id);
+
+                return (
+                  <article
+                    key={wallet.id}
+                    className="relative overflow-hidden rounded-xl p-5 text-white shadow-[0_16px_30px_rgba(15,23,42,0.28)]"
+                    style={{
+                      backgroundImage: `linear-gradient(145deg, ${hexToRgba(displayColor, 0.98)} 0%, ${hexToRgba(displayColor, 0.72)} 45%, ${hexToRgba('#0f172a', 0.95)} 120%)`,
+                    }}
+                  >
+                    <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/20 blur-2xl" />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <CardChipIcon />
+                          <span className="rounded-full border border-white/35 bg-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-white/90">
+                            Debit
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteWallet(wallet.id)}
+                          disabled={isDeleting}
+                          className="rounded-md border border-white/35 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+                          aria-label={`Delete account ${wallet.name}`}
+                        >
+                          {isDeleting ? 'Removing...' : 'Delete'}
+                        </button>
+                      </div>
+
+                      <p className="mt-9 font-mono text-lg tracking-[0.25em] text-white/95">
+                        **** **** **** {cardLast4(wallet.id)}
+                      </p>
+
+                      <div className="mt-6 flex items-end justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Wallet</p>
+                          <p className="mt-1 truncate text-base font-semibold text-white">{wallet.name}</p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-[0.2em] text-white/70">Balance</p>
+                          <p className="mt-1 text-xl font-semibold text-white">{balanceLabel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </AppShell>
 
       {isModalOpen ? (
         <div

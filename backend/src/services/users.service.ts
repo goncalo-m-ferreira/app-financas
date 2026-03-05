@@ -15,6 +15,10 @@ export type CreateUserInput = {
 };
 
 export type UpdateUserInput = Partial<CreateUserInput>;
+export type UpdateMyProfileInput = {
+  name: string;
+  defaultCurrency: string;
+};
 
 type SafeUser = Omit<User, 'passwordHash'>;
 
@@ -102,4 +106,29 @@ export async function deleteUser(userId: string): Promise<SafeUser> {
   });
 
   return toSafeUser(deletedUser);
+}
+
+export async function updateMyProfile(
+  userId: string,
+  input: UpdateMyProfileInput,
+): Promise<SafeUser> {
+  await getUserById(userId);
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name: input.name,
+      defaultCurrency: input.defaultCurrency,
+    },
+  });
+
+  return toSafeUser(user);
+}
+
+export async function deleteMyAccount(userId: string): Promise<void> {
+  await getUserById(userId);
+
+  await prisma.user.delete({
+    where: { id: userId },
+  });
 }

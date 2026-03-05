@@ -27,6 +27,7 @@ type AuthContextValue = {
   login: (payload: LoginInput) => Promise<void>;
   loginWithGoogleCredential: (credential: string) => Promise<void>;
   register: (payload: RegisterInput) => Promise<void>;
+  setAuthenticatedUser: (user: ApiUser) => void;
   logout: () => void;
 };
 
@@ -101,6 +102,10 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     applyAuthenticatedSession(auth);
   }, [applyAuthenticatedSession]);
 
+  const setAuthenticatedUser = useCallback((nextUser: ApiUser) => {
+    setUser(nextUser);
+  }, []);
+
   const logout = useCallback(() => {
     clearAuthToken();
     setToken(null);
@@ -117,9 +122,10 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
       login,
       loginWithGoogleCredential,
       register,
+      setAuthenticatedUser,
       logout,
     }),
-    [isInitializing, login, loginWithGoogleCredential, logout, register, token, user],
+    [isInitializing, login, loginWithGoogleCredential, logout, register, setAuthenticatedUser, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

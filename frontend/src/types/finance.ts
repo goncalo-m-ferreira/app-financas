@@ -121,6 +121,15 @@ export type RegisterInput = {
   defaultCurrency?: string;
 };
 
+export type UpdateCurrentUserInput = {
+  name: string;
+  defaultCurrency: string;
+};
+
+export type DeleteCurrentUserResponse = {
+  success: boolean;
+};
+
 export type LoginInput = {
   email: string;
   password: string;

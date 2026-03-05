@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChartCards } from '../components/dashboard/ChartCards';
 import { DeleteConfirmModal } from '../components/dashboard/DeleteConfirmModal';
 import { EditTransactionModal } from '../components/dashboard/EditTransactionModal';
 import { ImportCsvModal } from '../components/dashboard/ImportCsvModal';
 import { NewTransactionModal } from '../components/dashboard/NewTransactionModal';
-import { Sidebar } from '../components/dashboard/Sidebar';
 import { TopHeader } from '../components/dashboard/TopHeader';
 import { TransactionsList } from '../components/dashboard/TransactionsList';
+import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
 import { useSearch } from '../context/SearchContext';
@@ -58,11 +57,10 @@ type PendingDeleteTransaction = {
 };
 
 export function DashboardPage(): JSX.Element {
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const { month, year } = useDateFilter();
   const { searchQuery } = useSearch();
-  const { isDarkMode, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
   const [dashboard, setDashboard] = useState<DashboardApiData>(INITIAL_DASHBOARD);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -135,8 +133,6 @@ export function DashboardPage(): JSX.Element {
   }, [month, reloadKey, searchQuery, token, year]);
 
   const currency = dashboard.user.defaultCurrency || user?.defaultCurrency || 'EUR';
-  const userName = dashboard.user.name || user?.name || 'Guest User';
-
   const totalBalanceLabel = useMemo(() => {
     const totalBalance = calculateTotalBalance(dashboard.transactions);
     return formatTotalBalance(totalBalance, currency);
@@ -318,11 +314,6 @@ export function DashboardPage(): JSX.Element {
     setReloadKey((value) => value + 1);
   }
 
-  function handleLogout(): void {
-    logout();
-    navigate('/login', { replace: true });
-  }
-
   function handleStartEditing(transactionId: string): void {
     const transaction = transactionsById.get(transactionId) ?? null;
     setEditingTransaction(transaction);
@@ -330,59 +321,49 @@ export function DashboardPage(): JSX.Element {
 
   return (
     <>
-      <div className="min-h-screen bg-[#eef0f1] p-3 dark:bg-[#020617] lg:p-5">
-        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[#0b1220] dark:shadow-[0_20px_55px_rgba(2,6,23,0.85)]">
-          <div className="lg:grid lg:grid-cols-[240px_1fr]">
-            <Sidebar isDarkMode={isDarkMode} onToggleTheme={toggleTheme} activeItem="dashboard" />
+      <AppShell activeItem="dashboard">
+        <TopHeader
+          balanceLabel={totalBalanceLabel}
+          onAddTransaction={() => setIsModalOpen(true)}
+          onImportCsv={() => setIsImportModalOpen(true)}
+        />
 
-            <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
-              <TopHeader
-                balanceLabel={totalBalanceLabel}
-                userName={userName}
-                onAddTransaction={() => setIsModalOpen(true)}
-                onImportCsv={() => setIsImportModalOpen(true)}
-                onLogout={handleLogout}
-              />
-
-              {loading ? (
-                <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                  A carregar dados da API...
-                </div>
-              ) : null}
-
-              {errorMessage ? (
-                <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-                  <p>{errorMessage}</p>
-                  <button
-                    type="button"
-                    onClick={() => setReloadKey((value) => value + 1)}
-                    className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
-                  >
-                    Tentar novamente
-                  </button>
-                </section>
-              ) : null}
-
-              {!errorMessage ? (
-                <>
-                  <ChartCards
-                    expenseByCategory={expenseByCategory}
-                    balanceTrend={balanceTrend}
-                    currency={currency}
-                    isDarkMode={isDarkMode}
-                  />
-                  <TransactionsList
-                    groups={transactionGroups}
-                    searchQuery={searchQuery}
-                    onEdit={handleStartEditing}
-                    onDelete={handleRequestDeleteTransaction}
-                  />
-                </>
-              ) : null}
-            </main>
+        {loading ? (
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            A carregar dados da API...
           </div>
-        </div>
-      </div>
+        ) : null}
+
+        {errorMessage ? (
+          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <p>{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((value) => value + 1)}
+              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+            >
+              Tentar novamente
+            </button>
+          </section>
+        ) : null}
+
+        {!errorMessage ? (
+          <>
+            <ChartCards
+              expenseByCategory={expenseByCategory}
+              balanceTrend={balanceTrend}
+              currency={currency}
+              isDarkMode={isDarkMode}
+            />
+            <TransactionsList
+              groups={transactionGroups}
+              searchQuery={searchQuery}
+              onEdit={handleStartEditing}
+              onDelete={handleRequestDeleteTransaction}
+            />
+          </>
+        ) : null}
+      </AppShell>
 
       <NewTransactionModal
         open={isModalOpen}

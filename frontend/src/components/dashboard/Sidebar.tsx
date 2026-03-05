@@ -21,13 +21,25 @@ const primaryItems: NavItem[] = [
   { id: 'mailbox', label: 'Mailbox', icon: <MailIcon />, href: '/mailbox' },
 ];
 
-const secondaryItems: NavItem[] = [{ id: 'settings', label: 'Settings', icon: <GearIcon />, href: '/settings' }];
+const secondaryItems: NavItem[] = [
+  { id: 'categories', label: 'Category Editor', icon: <GearIcon />, href: '/categories' },
+];
 const adminItem: NavItem = { id: 'admin', label: 'Admin', icon: <ShieldIcon />, href: '/admin' };
 
 type SidebarProps = {
   isDarkMode: boolean;
   onToggleTheme: () => void;
-  activeItem: 'home' | 'dashboard' | 'accounts' | 'budgets' | 'reports' | 'mailbox' | 'settings' | 'admin';
+  activeItem:
+    | 'home'
+    | 'dashboard'
+    | 'accounts'
+    | 'budgets'
+    | 'reports'
+    | 'mailbox'
+    | 'categories'
+    | 'profile'
+    | 'admin';
+  mobileHeaderRightSlot?: ReactNode;
 };
 
 type SidebarContentProps = SidebarProps & {
@@ -181,7 +193,12 @@ function SidebarContent({
   );
 }
 
-export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps): JSX.Element {
+export function Sidebar({
+  isDarkMode,
+  onToggleTheme,
+  activeItem,
+  mobileHeaderRightSlot,
+}: SidebarProps): JSX.Element {
   const { isAdmin } = useAuth();
   const { unreadCount } = useNotifications();
   const location = useLocation();
@@ -228,15 +245,19 @@ export function Sidebar({ isDarkMode, onToggleTheme, activeItem }: SidebarProps)
           <PlusMarkIcon />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          aria-label="Open navigation menu"
-          aria-expanded={isMobileSidebarOpen}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          <MenuIcon />
-        </button>
+        <div className="flex items-center gap-2">
+          {mobileHeaderRightSlot}
+
+          <button
+            type="button"
+            onClick={() => setIsMobileSidebarOpen(true)}
+            aria-label="Open navigation menu"
+            aria-expanded={isMobileSidebarOpen}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <MenuIcon />
+          </button>
+        </div>
       </header>
 
       <div

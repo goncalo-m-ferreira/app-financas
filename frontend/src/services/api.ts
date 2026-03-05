@@ -9,6 +9,7 @@ import type {
   ApiWallet,
   AuthPayload,
   BudgetOverview,
+  DeleteCurrentUserResponse,
   CreateBudgetInput,
   CreateExpenseCategoryInput,
   CreateReportInput,
@@ -22,6 +23,7 @@ import type {
   LoginInput,
   MonthYearFilter,
   RegisterInput,
+  UpdateCurrentUserInput,
   UpdateTransactionInput,
   UpdateWalletInput,
 } from '../types/finance';
@@ -37,7 +39,7 @@ type ApiValidationDetail = {
 };
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   token?: string;
   signal?: AbortSignal;
@@ -195,6 +197,24 @@ export async function fetchCurrentUser(token: string, signal?: AbortSignal): Pro
   return requestJson<ApiUser>('/auth/me', {
     token,
     signal,
+  });
+}
+
+export async function updateCurrentUser(
+  token: string,
+  payload: UpdateCurrentUserInput,
+): Promise<ApiUser> {
+  return requestJson<ApiUser>('/users/me', {
+    method: 'PUT',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteCurrentUser(token: string): Promise<DeleteCurrentUserResponse> {
+  return requestJson<DeleteCurrentUserResponse>('/users/me', {
+    method: 'DELETE',
+    token,
   });
 }
 

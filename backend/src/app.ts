@@ -13,6 +13,7 @@ import { homeRouter } from './routes/home.routes.js';
 import { notificationsRouter } from './routes/notifications.routes.js';
 import { reportsRouter } from './routes/reports.routes.js';
 import { authTransactionsRouter } from './routes/transactions.routes.js';
+import { usersRouter } from './routes/users.routes.js';
 import { walletsRouter } from './routes/wallets.routes.js';
 
 export const app = express();
@@ -40,6 +41,7 @@ app.use('/api', walletsRouter);
 app.use('/api', homeRouter);
 app.use('/api', reportsRouter);
 app.use('/api', notificationsRouter);
+app.use('/api', usersRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

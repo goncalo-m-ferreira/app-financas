@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { SUPPORTED_CURRENCIES } from '../constants/currencies';
 import { useAuth } from '../context/AuthContext';
 import { ApiClientError } from '../services/api';
 
@@ -9,8 +10,6 @@ type AuthMode = 'login' | 'register';
 type AuthPageProps = {
   mode: AuthMode;
 };
-
-const CURRENCY_OPTIONS = ['EUR', 'USD', 'GBP', 'JPY', 'BRL', 'CHF', 'CAD', 'AUD'] as const;
 
 export function AuthPage({ mode }: AuthPageProps): JSX.Element {
   const { isAuthenticated, isInitializing, login, loginWithGoogleCredential, register } = useAuth();
@@ -152,7 +151,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
                 required
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-slate-500"
               >
-                {CURRENCY_OPTIONS.map((currency) => (
+                {SUPPORTED_CURRENCIES.map((currency) => (
                   <option key={currency} value={currency}>
                     {currency}
                   </option>

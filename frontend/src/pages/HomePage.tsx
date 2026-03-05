@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
 import { DeleteConfirmModal } from '../components/dashboard/DeleteConfirmModal';
 import { EditTransactionModal } from '../components/dashboard/EditTransactionModal';
 import { NewTransactionModal } from '../components/dashboard/NewTransactionModal';
-import { Sidebar } from '../components/dashboard/Sidebar';
+import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
-import { useTheme } from '../context/ThemeContext';
 import {
   ApiClientError,
   createTransaction,
@@ -98,10 +96,8 @@ function resolveAlertLevel(usageRatio: number): 'SAFE' | 'WARNING' | 'CRITICAL' 
 }
 
 export function HomePage(): JSX.Element {
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const { month, year } = useDateFilter();
-  const { isDarkMode, toggleTheme } = useTheme();
-  const navigate = useNavigate();
   const [insights, setInsights] = useState<HomeInsightsResponse>(INITIAL_INSIGHTS);
   const [wallets, setWallets] = useState<ApiWallet[]>([]);
   const [categories, setCategories] = useState<ApiExpenseCategory[]>([]);
@@ -351,52 +347,35 @@ export function HomePage(): JSX.Element {
     }
   }
 
-  function handleLogout(): void {
-    logout();
-    navigate('/login', { replace: true });
-  }
-
   return (
     <>
-      <div className="min-h-screen bg-[#eef0f1] p-3 dark:bg-[#020617] lg:p-5">
-        <div className="mx-auto max-w-[1380px] overflow-hidden rounded-[28px] border border-slate-200 bg-[#f6f7f8] shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[#0b1220] dark:shadow-[0_20px_55px_rgba(2,6,23,0.85)]">
-          <div className="lg:grid lg:grid-cols-[240px_1fr]">
-            <Sidebar isDarkMode={isDarkMode} onToggleTheme={toggleTheme} activeItem="home" />
+      <AppShell activeItem="home">
+        <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                Command Center
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                Welcome back, {user?.name ?? 'User'}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Quick view of wallets, recent activity and budget alerts.
+              </p>
+            </div>
 
-            <main className="space-y-4 p-4 lg:p-6" aria-live="polite">
-              <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                      Command Center
-                    </p>
-                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                      Welcome back, {user?.name ?? 'User'}
-                    </h1>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Quick view of wallets, recent activity and budget alerts.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <MonthYearSelector />
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(true)}
-                      className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                      Add Transaction
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              </header>
+            <div className="flex flex-wrap items-center gap-3">
+              <MonthYearSelector />
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                Add Transaction
+              </button>
+            </div>
+          </div>
+        </header>
 
               {loading ? (
                 <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
@@ -604,10 +583,7 @@ export function HomePage(): JSX.Element {
                   </section>
                 </>
               ) : null}
-            </main>
-          </div>
-        </div>
-      </div>
+      </AppShell>
 
       <NewTransactionModal
         open={isModalOpen}

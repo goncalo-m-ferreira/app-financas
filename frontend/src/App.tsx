@@ -4,12 +4,13 @@ import { LoginPage, RegisterPage } from './pages/AuthPage';
 import { AccountsCardsPage } from './pages/AccountsCardsPage';
 import { AdminPage } from './pages/AdminPage';
 import { BudgetPage } from './pages/BudgetPage';
+import { CategoryEditorPage } from './pages/CategoryEditorPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
 import { MailboxPage } from './pages/MailboxPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { ReportsPage } from './pages/ReportsPage';
-import { SettingsPage } from './pages/SettingsPage';
 
 function App(): JSX.Element {
   return (
@@ -25,7 +26,9 @@ function App(): JSX.Element {
         <Route path="/budgets" element={<BudgetPage />} />
         <Route path="/mailbox" element={<MailboxPage />} />
         <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/categories" element={<CategoryEditorPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<Navigate to="/categories" replace />} />
       </Route>
 
       <Route element={<ProtectedRoute requiredRole="ADMIN" />}>

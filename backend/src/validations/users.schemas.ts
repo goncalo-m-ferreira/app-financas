@@ -30,3 +30,8 @@ export const updateUserBodySchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: 'É necessário enviar pelo menos um campo para atualização.',
   });
+
+export const updateMyProfileBodySchema = z.object({
+  name: z.string().trim().min(2, 'name deve ter pelo menos 2 caracteres.').max(120),
+  defaultCurrency: currencySchema,
+});
