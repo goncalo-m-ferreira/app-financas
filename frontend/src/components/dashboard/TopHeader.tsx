@@ -31,9 +31,12 @@ export function TopHeader({
   }, [debouncedSearchInput, searchQuery, setSearchQuery]);
 
   return (
-    <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
+    <header className="rounded-2xl border border-slate-200/70 bg-white/75 px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-950/45 dark:shadow-[0_24px_45px_rgba(2,6,23,0.65)] lg:px-6 lg:py-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,460px)_minmax(0,1fr)] xl:items-center">
+        <div className="flex flex-col justify-center gap-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+            Assets & Investments
+          </p>
           <p className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
             {balanceLabel}
           </p>
@@ -42,43 +45,49 @@ export function TopHeader({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
-          <MonthYearSelector />
+        <label className="relative block w-full xl:mx-auto xl:max-w-[460px]">
+          <span className="sr-only">Search transactions</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-400">
+            <SearchIcon />
+          </span>
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Search transactions..."
+            className="h-11 w-full rounded-xl border border-slate-300/50 bg-slate-800/50 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-300/90 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/35 dark:border-slate-700/60 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-400"
+          />
+        </label>
 
-          <label className="relative block">
-            <span className="sr-only">Search transactions</span>
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-              <SearchIcon />
-            </span>
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search transactions..."
-              className="h-9 w-56 rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-slate-500"
-            />
-          </label>
+        <div className="flex flex-wrap items-center gap-4 xl:justify-end">
+          <MonthYearSelector variant="dashboardTopbar" />
 
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 transition hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            <BellIcon />
-            Notifications
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled
+              title="Coming Soon"
+              aria-label="Notifications (Coming Soon)"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/70 bg-white/75 text-slate-500 opacity-40 shadow-sm disabled:cursor-not-allowed dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400"
+            >
+              <BellIcon />
+            </button>
 
-          <button
-            type="button"
-            aria-label="Open quick actions"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            <GridIcon />
-          </button>
+            <button
+              type="button"
+              disabled
+              title="Coming Soon"
+              aria-label="Open quick actions (Coming Soon)"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/70 bg-white/75 text-slate-500 opacity-40 shadow-sm disabled:cursor-not-allowed dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400"
+            >
+              <GridIcon />
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={onAddTransaction}
-            className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
           >
             <PlusIcon />
             Add Transaction
@@ -87,7 +96,7 @@ export function TopHeader({
           <button
             type="button"
             onClick={onImportCsv}
-            className="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Import CSV
           </button>
