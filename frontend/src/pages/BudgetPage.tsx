@@ -3,6 +3,7 @@ import { BudgetCards } from '../components/budgets/BudgetCards';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
 import { NewBudgetModal } from '../components/budgets/NewBudgetModal';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
 import {
@@ -166,25 +167,19 @@ export function BudgetPage(): JSX.Element {
   return (
     <>
       <AppShell activeItem="budgets">
-        <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Budgets</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Manage spending limits by category for {monthLabel}.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <MonthYearSelector />
-
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <PremiumPageHeader
+          title="Budgets"
+          description={`Manage spending limits by category for ${monthLabel}.`}
+          actions={
+            <>
+              <MonthYearSelector variant="dashboardTopbar" />
+              <div className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
                 Total limit:{' '}
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
                   {formatCurrency(totals.limit, currency)}
                 </span>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+              <div className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
                 Total spent:{' '}
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
                   {formatCurrency(totals.spent, currency)}
@@ -193,13 +188,13 @@ export function BudgetPage(): JSX.Element {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
               >
                 New Budget
               </button>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        />
 
         {loading ? (
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">

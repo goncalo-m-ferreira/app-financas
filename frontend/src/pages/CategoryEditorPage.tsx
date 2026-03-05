@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import {
   ApiClientError,
@@ -160,16 +161,10 @@ export function CategoryEditorPage(): JSX.Element {
 
   return (
     <AppShell activeItem="categories">
-      <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            Category Editor
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Manage expense categories used in transactions and budgets.
-          </p>
-        </div>
-      </header>
+      <PremiumPageHeader
+        title="Category Editor"
+        description="Manage expense categories used in transactions and budgets."
+      />
 
       {errorMessage ? (
         <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

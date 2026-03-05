@@ -4,6 +4,7 @@ import { DeleteConfirmModal } from '../components/dashboard/DeleteConfirmModal';
 import { EditTransactionModal } from '../components/dashboard/EditTransactionModal';
 import { NewTransactionModal } from '../components/dashboard/NewTransactionModal';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
 import {
@@ -350,32 +351,23 @@ export function HomePage(): JSX.Element {
   return (
     <>
       <AppShell activeItem="home">
-        <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                Command Center
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                Welcome back, {user?.name ?? 'User'}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Quick view of wallets, recent activity and budget alerts.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <MonthYearSelector />
+        <PremiumPageHeader
+          eyebrow="Command Center"
+          title={`Welcome back, ${user?.name ?? 'User'}`}
+          description="Quick view of wallets, recent activity and budget alerts."
+          actions={
+            <>
+              <MonthYearSelector variant="dashboardTopbar" />
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
               >
                 Add Transaction
               </button>
-            </div>
-          </div>
-        </header>
+            </>
+          }
+        />
 
               {loading ? (
                 <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">

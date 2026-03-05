@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import { ApiClientError, createWallet, deleteWallet, fetchWallets } from '../services/api';
 import type { ApiWallet } from '../types/finance';
@@ -207,26 +208,19 @@ export function AccountsCardsPage(): JSX.Element {
   return (
     <>
       <AppShell activeItem="accounts">
-        <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                Accounts & Cards
-              </h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Manage all your wallets as modern debit and credit cards.
-              </p>
-            </div>
-
+        <PremiumPageHeader
+          title="Accounts & Cards"
+          description="Manage all your wallets as modern debit and credit cards."
+          actions={
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+              className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
             >
               Add New Account
             </button>
-          </div>
-        </header>
+          }
+        />
 
         {errorMessage ? (
           <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

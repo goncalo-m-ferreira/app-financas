@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
 import { ApiClientError, createReport, fetchReports } from '../services/api';
@@ -146,35 +147,30 @@ export function ReportsPage(): JSX.Element {
 
   return (
     <AppShell activeItem="reports">
-      <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Reports</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Generate asynchronous monthly PDF reports via RabbitMQ.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <MonthYearSelector />
+      <PremiumPageHeader
+        title="Reports"
+        description="Generate asynchronous monthly PDF reports via RabbitMQ."
+        actions={
+          <>
+            <MonthYearSelector variant="dashboardTopbar" />
             <button
               type="button"
               onClick={() => void handleGenerateReport()}
               disabled={isGenerating}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-65 disabled:shadow-none disabled:hover:from-blue-600 disabled:hover:to-cyan-500 disabled:active:scale-100"
             >
               {isGenerating ? 'Enqueuing...' : 'Generate Monthly Report'}
             </button>
             <button
               type="button"
               onClick={() => setRefreshTick((current) => current + 1)}
-              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Refresh
             </button>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {errorMessage ? (
         <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">

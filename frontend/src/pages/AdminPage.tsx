@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '../components/layout/AppShell';
+import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
 import { ApiClientError, fetchAdminOverview } from '../services/api';
 import type { AdminOverviewResponse } from '../types/finance';
@@ -72,24 +73,19 @@ export function AdminPage(): JSX.Element {
 
   return (
     <AppShell activeItem="admin">
-      <header className="rounded-xl bg-slate-50 px-6 py-6 dark:bg-slate-950/50">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Admin</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Overview of registered accounts on the platform.
-            </p>
-          </div>
-
+      <PremiumPageHeader
+        title="Admin"
+        description="Overview of registered accounts on the platform."
+        actions={
           <button
             type="button"
             onClick={() => setReloadKey((value) => value + 1)}
-            className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             Refresh
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Total Accounts</p>
