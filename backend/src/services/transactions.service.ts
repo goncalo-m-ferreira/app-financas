@@ -28,6 +28,18 @@ export type CreateTransactionInput = {
   walletId: string;
 };
 
+export type CreateTransactionInTxInput = {
+  userId: string;
+  type: TransactionType;
+  amount: number;
+  description?: string | null;
+  transactionDate: Date;
+  categoryId: string | null;
+  walletId: string;
+  recurringRuleId?: string | null;
+  recurringExecutionId?: string | null;
+};
+
 export type UpdateTransactionInput = {
   type?: TransactionType;
   amount?: number;
@@ -748,6 +760,15 @@ async function createBudgetAlertIfNeeded(params: {
   });
 }
 
+export async function createBudgetAlertForTransaction(params: {
+  userId: string;
+  categoryId: string | null;
+  transactionDate: Date;
+  transactionType: TransactionType;
+}): Promise<void> {
+  await createBudgetAlertIfNeeded(params);
+}
+
 async function getTransactionOrThrow(
   userId: string,
   transactionId: string,
@@ -901,6 +922,68 @@ export async function getTransactionById(
   return toTransactionResponse(transaction);
 }
 
+export async function createTransactionInTx(
+  tx: Prisma.TransactionClient,
+  input: CreateTransactionInTxInput,
+): Promise<TransactionWithRelations> {
+  if (input.type === 'EXPENSE' && !input.categoryId) {
+    throw new AppError('categoryId é obrigatório para transações do tipo EXPENSE.', 400);
+  }
+
+  if (!input.walletId) {
+    throw new AppError('walletId is required.', 400);
+  }
+
+  const walletDelta = calculateWalletBalanceDelta(input.type, input.amount);
+
+  const createdTransaction = await tx.transaction.create({
+    data: {
+      userId: input.userId,
+      type: input.type,
+      amount: input.amount,
+      description: input.description,
+      transactionDate: input.transactionDate,
+      categoryId: input.categoryId,
+      walletId: input.walletId,
+      recurringRuleId: input.recurringRuleId ?? null,
+      recurringExecutionId: input.recurringExecutionId ?? null,
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          icon: true,
+        },
+      },
+      wallet: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+    },
+  });
+
+  await tx.wallet.update({
+    where: {
+      userId_id: {
+        userId: input.userId,
+        id: input.walletId,
+      },
+    },
+    data: {
+      balance: {
+        increment: walletDelta,
+      },
+    },
+  });
+
+  return createdTransaction;
+}
+
 export async function createTransaction(
   userId: string,
   input: CreateTransactionInput,
@@ -923,53 +1006,18 @@ export async function createTransaction(
 
   await ensureWalletBelongsToUser(userId, input.walletId);
 
-  const walletDelta = calculateWalletBalanceDelta(input.type, input.amount);
-
   const transaction = await prisma.$transaction(async (tx) => {
-    const createdTransaction = await tx.transaction.create({
-      data: {
-        userId,
-        type: input.type,
-        amount: input.amount,
-        description: input.description,
-        transactionDate: input.transactionDate,
-        categoryId,
-        walletId: input.walletId,
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-            icon: true,
-          },
-        },
-        wallet: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-          },
-        },
-      },
+    return createTransactionInTx(tx, {
+      userId,
+      type: input.type,
+      amount: input.amount,
+      description: input.description,
+      transactionDate: input.transactionDate,
+      categoryId,
+      walletId: input.walletId,
+      recurringRuleId: null,
+      recurringExecutionId: null,
     });
-
-    await tx.wallet.update({
-      where: {
-        userId_id: {
-          userId,
-          id: input.walletId,
-        },
-      },
-      data: {
-        balance: {
-          increment: walletDelta,
-        },
-      },
-    });
-
-    return createdTransaction;
   });
 
   await eventPublisher.publish({
@@ -985,7 +1033,7 @@ export async function createTransaction(
     },
   });
 
-  await createBudgetAlertIfNeeded({
+  await createBudgetAlertForTransaction({
     userId,
     categoryId: transaction.categoryId,
     transactionDate: transaction.transactionDate,
