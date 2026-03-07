@@ -17,6 +17,7 @@ const primaryItems: NavItem[] = [
   { id: 'dashboard', label: 'Assets & Investments', icon: <PieIcon />, href: '/dashboard' },
   { id: 'accounts', label: 'Accounts & Cards', icon: <CardIcon />, href: '/accounts' },
   { id: 'budgets', label: 'Budget', icon: <WalletIcon />, href: '/budgets' },
+  { id: 'recurring', label: 'Recurring Rules', icon: <RepeatIcon />, href: '/recurring-rules' },
   { id: 'reports', label: 'Reports', icon: <ReportIcon />, href: '/reports' },
   { id: 'mailbox', label: 'Mailbox', icon: <MailIcon />, href: '/mailbox' },
 ];
@@ -34,6 +35,7 @@ type SidebarProps = {
     | 'dashboard'
     | 'accounts'
     | 'budgets'
+    | 'recurring'
     | 'reports'
     | 'mailbox'
     | 'categories'
@@ -384,6 +386,15 @@ function WalletIcon(): JSX.Element {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M4 8h16v10H4z" stroke="currentColor" strokeWidth="2" />
       <path d="M16 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RepeatIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M17 3h4v4M7 21H3v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20 7a8 8 0 0 0-13.6-2.6L5 6M4 17a8 8 0 0 0 13.6 2.6L19 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

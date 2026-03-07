@@ -10,6 +10,7 @@ import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
 import { MailboxPage } from './pages/MailboxPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RecurringRulesPage } from './pages/RecurringRulesPage';
 import { ReportsPage } from './pages/ReportsPage';
 
 function App(): JSX.Element {
@@ -24,6 +25,7 @@ function App(): JSX.Element {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/accounts" element={<AccountsCardsPage />} />
         <Route path="/budgets" element={<BudgetPage />} />
+        <Route path="/recurring-rules" element={<RecurringRulesPage />} />
         <Route path="/mailbox" element={<MailboxPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/categories" element={<CategoryEditorPage />} />

@@ -9,6 +9,7 @@ type AppShellProps = PropsWithChildren<{
     | 'dashboard'
     | 'accounts'
     | 'budgets'
+    | 'recurring'
     | 'reports'
     | 'mailbox'
     | 'categories'
