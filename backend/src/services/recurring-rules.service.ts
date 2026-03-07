@@ -3,7 +3,6 @@ import {
   RecurringEndMode,
   RecurringExecutionStatus,
   RecurringRuleStatus,
-  type RecurringExecution,
   type RecurringRule,
   type RecurringFrequency,
   type TransactionType,
@@ -36,8 +35,65 @@ const recurringRuleInclude = {
   },
 } satisfies Prisma.RecurringRuleInclude;
 
+const recurringExecutionInclude = {
+  rule: {
+    select: {
+      id: true,
+      description: true,
+      type: true,
+      amount: true,
+      status: true,
+      pausedReason: true,
+      frequency: true,
+      timezone: true,
+      wallet: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          icon: true,
+        },
+      },
+    },
+  },
+  transaction: {
+    select: {
+      id: true,
+      type: true,
+      amount: true,
+      transactionDate: true,
+      wallet: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+        },
+      },
+      category: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          icon: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.RecurringExecutionInclude;
+
 type RecurringRuleWithRelations = Prisma.RecurringRuleGetPayload<{
   include: typeof recurringRuleInclude;
+}>;
+
+type RecurringExecutionWithRelations = Prisma.RecurringExecutionGetPayload<{
+  include: typeof recurringExecutionInclude;
 }>;
 
 type RuleEndSettings = {
@@ -90,7 +146,27 @@ export type RecurringRuleResponse = Omit<RecurringRuleWithRelations, 'amount'> &
   amount: string;
 };
 
-export type RecurringExecutionResponse = RecurringExecution;
+type RecurringExecutionRuleContext = Omit<
+  NonNullable<RecurringExecutionWithRelations['rule']>,
+  'amount'
+> & {
+  amount: string;
+};
+
+type RecurringExecutionTransactionContext = Omit<
+  NonNullable<RecurringExecutionWithRelations['transaction']>,
+  'amount'
+> & {
+  amount: string;
+};
+
+export type RecurringExecutionResponse = Omit<
+  RecurringExecutionWithRelations,
+  'rule' | 'transaction'
+> & {
+  rule: RecurringExecutionRuleContext | null;
+  transaction: RecurringExecutionTransactionContext | null;
+};
 
 export type RecurringExecutionsListResponse = {
   items: RecurringExecutionResponse[];
@@ -111,8 +187,24 @@ function toRecurringRuleResponse(rule: RecurringRuleWithRelations): RecurringRul
   };
 }
 
-function toRecurringExecutionResponse(execution: RecurringExecution): RecurringExecutionResponse {
-  return execution;
+function toRecurringExecutionResponse(
+  execution: RecurringExecutionWithRelations,
+): RecurringExecutionResponse {
+  return {
+    ...execution,
+    rule: execution.rule
+      ? {
+          ...execution.rule,
+          amount: execution.rule.amount.toString(),
+        }
+      : null,
+    transaction: execution.transaction
+      ? {
+          ...execution.transaction,
+          amount: execution.transaction.amount.toString(),
+        }
+      : null,
+  };
 }
 
 function parseDecimalToPositiveNumber(value: Prisma.Decimal): number {
@@ -733,6 +825,7 @@ export async function listRecurringExecutionsByUser(
 
   const rows = await prisma.recurringExecution.findMany({
     where,
+    include: recurringExecutionInclude,
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: take + 1,
   });

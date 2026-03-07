@@ -30,6 +30,7 @@ vi.mock('../src/lib/prisma.js', () => ({
 
 import {
   cancelRecurringRule,
+  listRecurringExecutionsByUser,
   pauseRecurringRule,
   previewRecurringRule,
   resumeRecurringRule,
@@ -258,5 +259,111 @@ describe('recurring-rules service semantics', () => {
     ).rejects.toMatchObject({
       statusCode: 404,
     });
+  });
+
+  test('listRecurringExecutionsByUser returns enriched contexts and cursor pagination', async () => {
+    prismaMock.recurringExecution.findMany.mockResolvedValue([
+      {
+        id: 'exec-2',
+        userId: 'user-1',
+        ruleId: 'rule-1',
+        scheduledFor: new Date('2026-05-09T10:00:00.000Z'),
+        status: 'SUCCESS',
+        attemptCount: 1,
+        attemptedAt: new Date('2026-05-09T10:00:01.000Z'),
+        errorType: null,
+        errorMessage: null,
+        createdAt: new Date('2026-05-09T10:00:02.000Z'),
+        updatedAt: new Date('2026-05-09T10:00:03.000Z'),
+        rule: {
+          id: 'rule-1',
+          description: 'Netflix',
+          type: 'EXPENSE',
+          amount: 29.9,
+          status: 'ACTIVE',
+          pausedReason: null,
+          frequency: 'MONTHLY',
+          timezone: 'Europe/Lisbon',
+          wallet: {
+            id: 'wallet-1',
+            name: 'Main',
+            color: '#000000',
+          },
+          category: {
+            id: 'category-1',
+            name: 'Bills',
+            color: '#111111',
+            icon: null,
+          },
+        },
+        transaction: {
+          id: 'tx-1',
+          type: 'EXPENSE',
+          amount: 29.9,
+          transactionDate: new Date('2026-05-09T10:00:00.000Z'),
+          wallet: {
+            id: 'wallet-1',
+            name: 'Main',
+            color: '#000000',
+          },
+          category: {
+            id: 'category-1',
+            name: 'Bills',
+            color: '#111111',
+            icon: null,
+          },
+        },
+      },
+      {
+        id: 'exec-1',
+        userId: 'user-1',
+        ruleId: 'rule-1',
+        scheduledFor: new Date('2026-05-08T10:00:00.000Z'),
+        status: 'FAILED',
+        attemptCount: 2,
+        attemptedAt: new Date('2026-05-08T10:00:01.000Z'),
+        errorType: 'TRANSIENT',
+        errorMessage: 'Timeout',
+        createdAt: new Date('2026-05-08T10:00:02.000Z'),
+        updatedAt: new Date('2026-05-08T10:00:03.000Z'),
+        rule: {
+          id: 'rule-1',
+          description: 'Netflix',
+          type: 'EXPENSE',
+          amount: 29.9,
+          status: 'ACTIVE',
+          pausedReason: null,
+          frequency: 'MONTHLY',
+          timezone: 'Europe/Lisbon',
+          wallet: {
+            id: 'wallet-1',
+            name: 'Main',
+            color: '#000000',
+          },
+          category: {
+            id: 'category-1',
+            name: 'Bills',
+            color: '#111111',
+            icon: null,
+          },
+        },
+        transaction: null,
+      },
+    ]);
+
+    const result = await listRecurringExecutionsByUser('user-1', {
+      take: 1,
+    });
+
+    expect(prismaMock.recurringExecution.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.any(Object),
+        take: 2,
+      }),
+    );
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].rule?.amount).toBe('29.9');
+    expect(result.items[0].transaction?.amount).toBe('29.9');
+    expect(result.nextCursor).toBe('exec-2');
   });
 });

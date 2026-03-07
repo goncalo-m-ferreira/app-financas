@@ -244,6 +244,56 @@ export type AdminOverviewResponse = {
   users: AdminOverviewUser[];
 };
 
+export type AdminRecurringOperationIssueType = 'FAILED_EXECUTION' | 'PAUSED_RULE';
+
+export type AdminRecurringOperationItem = {
+  issueType: AdminRecurringOperationIssueType;
+  occurredAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  rule: {
+    id: string;
+    description: string | null;
+    type: 'INCOME' | 'EXPENSE';
+    amount: string;
+    status: RecurringRuleStatus;
+    pausedReason: string | null;
+    frequency: RecurringFrequency;
+    timezone: string;
+    wallet: {
+      id: string;
+      name: string;
+      color: string | null;
+    };
+    category: {
+      id: string;
+      name: string;
+      color: string | null;
+      icon: string | null;
+    } | null;
+  };
+  execution: {
+    id: string;
+    status: RecurringExecutionStatus;
+    scheduledFor: string;
+    attemptedAt: string | null;
+    errorType: 'STRUCTURAL' | 'TRANSIENT' | null;
+    errorMessage: string | null;
+  } | null;
+};
+
+export type AdminRecurringOperationsResponse = {
+  summary: {
+    failedExecutions: number;
+    pausedRules: number;
+    affectedUsers: number;
+  };
+  items: AdminRecurringOperationItem[];
+};
+
 export type TransactionListItem = {
   id: string;
   timeLabel: string;
@@ -337,6 +387,44 @@ export type ApiRecurringExecution = {
   errorMessage: string | null;
   createdAt: string;
   updatedAt: string;
+  rule: {
+    id: string;
+    description: string | null;
+    type: 'INCOME' | 'EXPENSE';
+    amount: string;
+    status: RecurringRuleStatus;
+    pausedReason: string | null;
+    frequency: RecurringFrequency;
+    timezone: string;
+    wallet: {
+      id: string;
+      name: string;
+      color: string | null;
+    };
+    category: {
+      id: string;
+      name: string;
+      color: string | null;
+      icon: string | null;
+    } | null;
+  } | null;
+  transaction: {
+    id: string;
+    type: 'INCOME' | 'EXPENSE';
+    amount: string;
+    transactionDate: string;
+    wallet: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
+    category: {
+      id: string;
+      name: string;
+      color: string | null;
+      icon: string | null;
+    } | null;
+  } | null;
 };
 
 export type ApiRecurringExecutionsResponse = {

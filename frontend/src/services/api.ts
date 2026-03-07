@@ -1,5 +1,7 @@
 import type {
   AdminOverviewResponse,
+  AdminRecurringOperationIssueType,
+  AdminRecurringOperationsResponse,
   ApiBudget,
   ApiExpenseCategory,
   ApiNotification,
@@ -233,6 +235,25 @@ export async function fetchAdminOverview(
   const queryString = buildQueryString({ take });
 
   return requestJson<AdminOverviewResponse>(`/admin/overview${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchAdminRecurringOperations(
+  token: string,
+  options: {
+    take?: number;
+    issueType?: AdminRecurringOperationIssueType;
+  } = {},
+  signal?: AbortSignal,
+): Promise<AdminRecurringOperationsResponse> {
+  const queryString = buildQueryString({
+    take: options.take,
+    issueType: options.issueType,
+  });
+
+  return requestJson<AdminRecurringOperationsResponse>(`/admin/recurring-operations${queryString}`, {
     token,
     signal,
   });
