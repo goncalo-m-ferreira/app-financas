@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { RecurringCancelConfirmModal } from '../components/recurring/RecurringCancelConfirmModal';
 import { RecurringPreviewModal } from '../components/recurring/RecurringPreviewModal';
 import { RecurringRuleFormModal } from '../components/recurring/RecurringRuleFormModal';
@@ -45,6 +45,11 @@ type RowAction = 'PAUSING' | 'RESUMING' | 'CANCELLING';
 
 const HISTORY_PAGE_SIZE = 20;
 const HIGHLIGHT_TTL_MS = 8000;
+const SUCCESS_TOAST_TTL_MS = 2600;
+const RULES_TAB_ID = 'recurring-rules-tab';
+const RULES_PANEL_ID = 'recurring-rules-panel';
+const HISTORY_TAB_ID = 'recurring-history-tab';
+const HISTORY_PANEL_ID = 'recurring-history-panel';
 
 const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'ALL', label: 'All statuses' },
@@ -193,7 +198,10 @@ export function RecurringRulesPage(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>('ALL');
   const [loading, setLoading] = useState<boolean>(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState<number>(0);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingRule, setEditingRule] = useState<ApiRecurringRule | null>(null);
@@ -209,7 +217,12 @@ export function RecurringRulesPage(): JSX.Element {
   const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState<boolean>(false);
   const [historyLoadingMore, setHistoryLoadingMore] = useState<boolean>(false);
-  const [historyErrorMessage, setHistoryErrorMessage] = useState<string | null>(null);
+  const [historyInitialErrorMessage, setHistoryInitialErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [historyLoadMoreErrorMessage, setHistoryLoadMoreErrorMessage] =
+    useState<string | null>(null);
+  const [historyReloadKey, setHistoryReloadKey] = useState<number>(0);
   const [expandedExecutionId, setExpandedExecutionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -224,7 +237,7 @@ export function RecurringRulesPage(): JSX.Element {
     async function loadData(): Promise<void> {
       try {
         setLoading(true);
-        setErrorMessage(null);
+        setLoadErrorMessage(null);
 
         const [rulesResponse, walletsResponse, categoriesResponse] = await Promise.all([
           fetchRecurringRules(tokenValue, undefined, controller.signal),
@@ -245,16 +258,16 @@ export function RecurringRulesPage(): JSX.Element {
         }
 
         if (error instanceof ApiClientError) {
-          setErrorMessage(error.message);
+          setLoadErrorMessage(error.message);
           return;
         }
 
         if (error instanceof Error) {
-          setErrorMessage(error.message);
+          setLoadErrorMessage(error.message);
           return;
         }
 
-        setErrorMessage('Unexpected error while loading recurring rules.');
+        setLoadErrorMessage('Unexpected error while loading recurring rules.');
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -268,7 +281,7 @@ export function RecurringRulesPage(): JSX.Element {
       isMounted = false;
       controller.abort();
     };
-  }, [token]);
+  }, [reloadKey, token]);
 
   useEffect(() => {
     if (!token || activeSegment !== 'EXECUTION_HISTORY') {
@@ -282,7 +295,8 @@ export function RecurringRulesPage(): JSX.Element {
     async function loadExecutionHistory(): Promise<void> {
       try {
         setHistoryLoading(true);
-        setHistoryErrorMessage(null);
+        setHistoryInitialErrorMessage(null);
+        setHistoryLoadMoreErrorMessage(null);
 
         const response = await fetchRecurringExecutions(
           tokenValue,
@@ -310,16 +324,16 @@ export function RecurringRulesPage(): JSX.Element {
         }
 
         if (error instanceof ApiClientError) {
-          setHistoryErrorMessage(error.message);
+          setHistoryInitialErrorMessage(error.message);
           return;
         }
 
         if (error instanceof Error) {
-          setHistoryErrorMessage(error.message);
+          setHistoryInitialErrorMessage(error.message);
           return;
         }
 
-        setHistoryErrorMessage('Unexpected error while loading execution history.');
+        setHistoryInitialErrorMessage('Unexpected error while loading execution history.');
       } finally {
         if (isMounted) {
           setHistoryLoading(false);
@@ -333,7 +347,7 @@ export function RecurringRulesPage(): JSX.Element {
       isMounted = false;
       controller.abort();
     };
-  }, [activeSegment, historyRuleFilter, historyStatusFilter, token]);
+  }, [activeSegment, historyReloadKey, historyRuleFilter, historyStatusFilter, token]);
 
   useEffect(() => {
     if (!highlightedRuleId) {
@@ -348,6 +362,20 @@ export function RecurringRulesPage(): JSX.Element {
       window.clearTimeout(timeoutId);
     };
   }, [highlightedRuleId]);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, SUCCESS_TOAST_TTL_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [successMessage]);
 
   useEffect(() => {
     if (activeSegment !== 'RULES') {
@@ -406,6 +434,45 @@ export function RecurringRulesPage(): JSX.Element {
     [rules],
   );
 
+  useEffect(() => {
+    if (!highlightedRuleId) {
+      return;
+    }
+
+    const isStillVisible = filteredRules.some((rule) => rule.id === highlightedRuleId);
+    if (!isStillVisible) {
+      setHighlightedRuleId(null);
+    }
+  }, [filteredRules, highlightedRuleId]);
+
+  useEffect(() => {
+    if (historyRuleFilter === 'ALL') {
+      return;
+    }
+
+    if (rulesById.has(historyRuleFilter)) {
+      return;
+    }
+
+    setHistoryRuleFilter('ALL');
+    setHistoryItems([]);
+    setHistoryNextCursor(null);
+    setHistoryInitialErrorMessage(null);
+    setHistoryLoadMoreErrorMessage(null);
+    setExpandedExecutionId(null);
+  }, [historyRuleFilter, rulesById]);
+
+  useEffect(() => {
+    if (!expandedExecutionId) {
+      return;
+    }
+
+    const exists = historyItems.some((item) => item.id === expandedExecutionId);
+    if (!exists) {
+      setExpandedExecutionId(null);
+    }
+  }, [expandedExecutionId, historyItems]);
+
   const currency = user?.defaultCurrency || 'EUR';
   const canLoadMoreHistory = historyNextCursor !== null;
 
@@ -431,21 +498,35 @@ export function RecurringRulesPage(): JSX.Element {
     });
   }
 
-  async function loadPreview(ruleId: string, count: number) {
+  function showSuccess(message: string): void {
+    setSuccessMessage(message);
+  }
+
+  function resetHistoryViewState(): void {
+    setHistoryItems([]);
+    setHistoryNextCursor(null);
+    setHistoryInitialErrorMessage(null);
+    setHistoryLoadMoreErrorMessage(null);
+    setExpandedExecutionId(null);
+  }
+
+  const loadPreview = useCallback(async (ruleId: string, count: number) => {
     if (!token) {
       throw new Error('Session expired. Please sign in again.');
     }
 
     return fetchRecurringPreview(token, ruleId, count);
-  }
+  }, [token]);
 
   async function handleCreateRule(payload: CreateRecurringRuleInput): Promise<void> {
     if (!token) {
       throw new Error('Session expired. Please sign in again.');
     }
 
+    setActionErrorMessage(null);
     const createdRule = await createRecurringRule(token, payload);
     setRules((current) => sortRulesByCreatedAt([createdRule, ...current]));
+    showSuccess('Recurring rule created successfully.');
   }
 
   async function handleUpdateRule(ruleId: string, payload: UpdateRecurringRuleInput): Promise<void> {
@@ -453,27 +534,30 @@ export function RecurringRulesPage(): JSX.Element {
       throw new Error('Session expired. Please sign in again.');
     }
 
+    setActionErrorMessage(null);
     const updatedRule = await updateRecurringRule(token, ruleId, payload);
     replaceRule(updatedRule);
+    showSuccess('Recurring rule updated successfully.');
   }
 
   async function handlePauseRule(ruleId: string): Promise<void> {
     if (!token) {
-      setErrorMessage('Session expired. Please sign in again.');
+      setActionErrorMessage('Session expired. Please sign in again.');
       return;
     }
 
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     setRowAction(ruleId, 'PAUSING');
 
     try {
       const updatedRule = await pauseRecurringRule(token, ruleId);
       replaceRule(updatedRule);
+      showSuccess('Recurring rule paused successfully.');
     } catch (error) {
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        setActionErrorMessage(error.message);
       } else {
-        setErrorMessage('Failed to pause recurring rule.');
+        setActionErrorMessage('Failed to pause recurring rule.');
       }
     } finally {
       setRowAction(ruleId, null);
@@ -482,21 +566,22 @@ export function RecurringRulesPage(): JSX.Element {
 
   async function handleResumeRule(ruleId: string): Promise<void> {
     if (!token) {
-      setErrorMessage('Session expired. Please sign in again.');
+      setActionErrorMessage('Session expired. Please sign in again.');
       return;
     }
 
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     setRowAction(ruleId, 'RESUMING');
 
     try {
       const updatedRule = await resumeRecurringRule(token, ruleId);
       replaceRule(updatedRule);
+      showSuccess('Recurring rule resumed successfully.');
     } catch (error) {
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        setActionErrorMessage(error.message);
       } else {
-        setErrorMessage('Failed to resume recurring rule.');
+        setActionErrorMessage('Failed to resume recurring rule.');
       }
     } finally {
       setRowAction(ruleId, null);
@@ -508,18 +593,19 @@ export function RecurringRulesPage(): JSX.Element {
       return;
     }
 
-    setErrorMessage(null);
+    setActionErrorMessage(null);
     setRowAction(cancelTargetRule.id, 'CANCELLING');
 
     try {
       const updatedRule = await cancelRecurringRule(token, cancelTargetRule.id);
       replaceRule(updatedRule);
       setCancelTargetRule(null);
+      showSuccess('Recurring rule cancelled successfully.');
     } catch (error) {
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        setActionErrorMessage(error.message);
       } else {
-        setErrorMessage('Failed to cancel recurring rule.');
+        setActionErrorMessage('Failed to cancel recurring rule.');
       }
     } finally {
       setRowAction(cancelTargetRule.id, null);
@@ -532,7 +618,7 @@ export function RecurringRulesPage(): JSX.Element {
     }
 
     setHistoryLoadingMore(true);
-    setHistoryErrorMessage(null);
+    setHistoryLoadMoreErrorMessage(null);
 
     try {
       const response = await fetchRecurringExecutions(token, {
@@ -549,9 +635,9 @@ export function RecurringRulesPage(): JSX.Element {
       setHistoryNextCursor(response.nextCursor);
     } catch (error) {
       if (error instanceof Error) {
-        setHistoryErrorMessage(error.message);
+        setHistoryLoadMoreErrorMessage(error.message);
       } else {
-        setHistoryErrorMessage('Failed to load more execution history.');
+        setHistoryLoadMoreErrorMessage('Failed to load more execution history.');
       }
     } finally {
       setHistoryLoadingMore(false);
@@ -575,19 +661,44 @@ export function RecurringRulesPage(): JSX.Element {
     setEditingRule(null);
   }
 
+  function handleRetryInitialLoad(): void {
+    setReloadKey((current) => current + 1);
+  }
+
+  function handleRetryHistoryLoad(): void {
+    setHistoryReloadKey((current) => current + 1);
+  }
+
+  function handleHistoryStatusFilterChange(nextFilter: HistoryStatusFilter): void {
+    setHistoryStatusFilter(nextFilter);
+    resetHistoryViewState();
+  }
+
+  function handleHistoryRuleFilterChange(nextRuleFilter: string): void {
+    setHistoryRuleFilter(nextRuleFilter);
+    resetHistoryViewState();
+  }
+
   function handleViewRule(ruleId: string): void {
     setActiveSegment('RULES');
     setStatusFilter('ALL');
     setFrequencyFilter('ALL');
     setHighlightedRuleId(ruleId);
+    setHistoryLoadMoreErrorMessage(null);
+    setHistoryInitialErrorMessage(null);
     setExpandedExecutionId(null);
   }
 
   function handleSegmentChange(segment: RecurringSegment): void {
     setActiveSegment(segment);
-    if (segment !== 'EXECUTION_HISTORY') {
-      setExpandedExecutionId(null);
+    setExpandedExecutionId(null);
+    setHistoryLoadMoreErrorMessage(null);
+    if (segment === 'EXECUTION_HISTORY') {
+      setHighlightedRuleId(null);
+      return;
     }
+
+    setHistoryInitialErrorMessage(null);
   }
 
   return (
@@ -660,10 +771,16 @@ export function RecurringRulesPage(): JSX.Element {
         />
 
         <section className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-          <div className="inline-flex rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+          <div
+            className="inline-flex rounded-lg bg-slate-100 p-1 dark:bg-slate-950"
+            role="tablist"
+            aria-label="Recurring content segments"
+          >
             <button
               type="button"
+              id={RULES_TAB_ID}
               role="tab"
+              aria-controls={RULES_PANEL_ID}
               aria-selected={activeSegment === 'RULES'}
               onClick={() => handleSegmentChange('RULES')}
               className={[
@@ -677,7 +794,9 @@ export function RecurringRulesPage(): JSX.Element {
             </button>
             <button
               type="button"
+              id={HISTORY_TAB_ID}
               role="tab"
+              aria-controls={HISTORY_PANEL_ID}
               aria-selected={activeSegment === 'EXECUTION_HISTORY'}
               onClick={() => handleSegmentChange('EXECUTION_HISTORY')}
               className={[
@@ -698,14 +817,32 @@ export function RecurringRulesPage(): JSX.Element {
           </div>
         ) : null}
 
-        {errorMessage ? (
+        {loadErrorMessage ? (
           <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-            <p>{errorMessage}</p>
+            <p>{loadErrorMessage}</p>
+            <button
+              type="button"
+              onClick={handleRetryInitialLoad}
+              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+            >
+              Retry
+            </button>
+          </section>
+        ) : null}
+
+        {actionErrorMessage ? (
+          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <p>{actionErrorMessage}</p>
           </section>
         ) : null}
 
         {activeSegment === 'RULES' ? (
-          <>
+          <div
+            id={RULES_PANEL_ID}
+            role="tabpanel"
+            aria-labelledby={RULES_TAB_ID}
+            className="space-y-3"
+          >
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Recurring summary">
               <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Active</p>
@@ -825,13 +962,13 @@ export function RecurringRulesPage(): JSX.Element {
                                 {rule.status}
                               </span>
                               {attentionMessage ? (
-                                <p className="mt-2 max-w-[240px] text-xs text-slate-500 dark:text-slate-400">
+                                <p className="mt-2 max-w-[240px] break-words text-xs text-slate-500 dark:text-slate-400">
                                   {attentionMessage}
                                 </p>
                               ) : null}
                             </td>
-                            <td className="px-5 py-3 align-top">
-                              <p className="font-medium text-slate-800 dark:text-slate-100">
+                            <td className="max-w-[260px] px-5 py-3 align-top">
+                              <p className="break-words font-medium text-slate-800 dark:text-slate-100">
                                 {getRuleLabel(rule)}
                               </p>
                               {rule.isSubscription ? (
@@ -866,7 +1003,7 @@ export function RecurringRulesPage(): JSX.Element {
                             <td className="px-5 py-3 align-top">
                               <p className="text-slate-800 dark:text-slate-100">{endMode.primary}</p>
                               {endMode.secondary ? (
-                                <p className="mt-1 max-w-[170px] text-xs text-slate-500 dark:text-slate-400">
+                                <p className="mt-1 max-w-[170px] break-words text-xs text-slate-500 dark:text-slate-400">
                                   {endMode.secondary}
                                 </p>
                               ) : null}
@@ -935,9 +1072,14 @@ export function RecurringRulesPage(): JSX.Element {
                 </div>
               ) : null}
             </section>
-          </>
+          </div>
         ) : (
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <section
+            id={HISTORY_PANEL_ID}
+            role="tabpanel"
+            aria-labelledby={HISTORY_TAB_ID}
+            className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+          >
             <header className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="mr-auto text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -950,7 +1092,10 @@ export function RecurringRulesPage(): JSX.Element {
                   </span>
                   <select
                     value={historyStatusFilter}
-                    onChange={(event) => setHistoryStatusFilter(event.target.value as HistoryStatusFilter)}
+                    onChange={(event) =>
+                      handleHistoryStatusFilterChange(event.target.value as HistoryStatusFilter)
+                    }
+                    disabled={historyLoading || historyLoadingMore}
                     className="bg-transparent text-sm outline-none"
                   >
                     {HISTORY_STATUS_FILTER_OPTIONS.map((option) => (
@@ -967,7 +1112,8 @@ export function RecurringRulesPage(): JSX.Element {
                   </span>
                   <select
                     value={historyRuleFilter}
-                    onChange={(event) => setHistoryRuleFilter(event.target.value)}
+                    onChange={(event) => handleHistoryRuleFilterChange(event.target.value)}
+                    disabled={historyLoading || historyLoadingMore}
                     className="bg-transparent text-sm outline-none"
                   >
                     <option value="ALL">All rules</option>
@@ -987,13 +1133,20 @@ export function RecurringRulesPage(): JSX.Element {
               </div>
             ) : null}
 
-            {historyErrorMessage ? (
+            {historyInitialErrorMessage ? (
               <section className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-                <p>{historyErrorMessage}</p>
+                <p>{historyInitialErrorMessage}</p>
+                <button
+                  type="button"
+                  onClick={handleRetryHistoryLoad}
+                  className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+                >
+                  Retry
+                </button>
               </section>
             ) : null}
 
-            {!historyLoading && !historyErrorMessage && historyItems.length === 0 ? (
+            {!historyLoading && !historyInitialErrorMessage && historyItems.length === 0 ? (
               <div className="px-5 py-10 text-center">
                 <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   No execution history found
@@ -1004,7 +1157,7 @@ export function RecurringRulesPage(): JSX.Element {
               </div>
             ) : null}
 
-            {!historyLoading && !historyErrorMessage && historyItems.length > 0 ? (
+            {!historyLoading && historyItems.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
                   <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
@@ -1049,8 +1202,8 @@ export function RecurringRulesPage(): JSX.Element {
                       const isExpanded = expandedExecutionId === execution.id;
 
                       return (
-                        <>
-                          <tr key={execution.id} className="bg-white dark:bg-slate-900">
+                        <Fragment key={execution.id}>
+                          <tr className="bg-white dark:bg-slate-900">
                             <td className="px-5 py-3 align-top text-slate-700 dark:text-slate-300">
                               <p>
                                 {formatRecurringDateTime(
@@ -1072,7 +1225,7 @@ export function RecurringRulesPage(): JSX.Element {
                                 {execution.status}
                               </span>
                             </td>
-                            <td className="px-5 py-3 align-top text-slate-800 dark:text-slate-100">
+                            <td className="max-w-[240px] break-words px-5 py-3 align-top text-slate-800 dark:text-slate-100">
                               {ruleLabel}
                             </td>
                             <td className="px-5 py-3 align-top text-right font-semibold text-slate-800 dark:text-slate-100">
@@ -1102,14 +1255,14 @@ export function RecurringRulesPage(): JSX.Element {
                             <td className="px-5 py-3 align-top">
                               <p
                                 className={[
-                                  'text-sm font-medium',
+                                  'break-words text-sm font-medium',
                                   getRecurringReasonToneClass(reason.tone),
                                 ].join(' ')}
                               >
                                 {reason.label}
                               </p>
                               {reason.details ? (
-                                <p className="mt-1 max-w-[260px] text-xs text-slate-500 dark:text-slate-400">
+                                <p className="mt-1 max-w-[260px] break-words text-xs text-slate-500 dark:text-slate-400">
                                   {reason.details}
                                 </p>
                               ) : null}
@@ -1117,6 +1270,9 @@ export function RecurringRulesPage(): JSX.Element {
                             <td className="px-5 py-3 align-top text-right">
                               <button
                                 type="button"
+                                aria-expanded={isExpanded}
+                                aria-controls={`${execution.id}-details`}
+                                aria-label={isExpanded ? 'Hide execution details' : 'View execution details'}
                                 onClick={() =>
                                   setExpandedExecutionId((current) =>
                                     current === execution.id ? null : execution.id,
@@ -1129,8 +1285,8 @@ export function RecurringRulesPage(): JSX.Element {
                             </td>
                           </tr>
                           {isExpanded ? (
-                            <tr key={`${execution.id}-expanded`} className="bg-slate-50/80 dark:bg-slate-950/50">
-                              <td colSpan={9} className="px-5 py-4">
+                            <tr className="bg-slate-50/80 dark:bg-slate-950/50">
+                              <td id={`${execution.id}-details`} colSpan={9} className="px-5 py-4">
                                 <div className="grid gap-4 md:grid-cols-2">
                                   <div>
                                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -1171,7 +1327,7 @@ export function RecurringRulesPage(): JSX.Element {
                                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                                       Error message
                                     </p>
-                                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                                    <p className="mt-1 break-words text-sm text-slate-700 dark:text-slate-300">
                                       {execution.errorMessage ?? '-'}
                                     </p>
                                   </div>
@@ -1191,7 +1347,7 @@ export function RecurringRulesPage(): JSX.Element {
                               </td>
                             </tr>
                           ) : null}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -1199,12 +1355,26 @@ export function RecurringRulesPage(): JSX.Element {
               </div>
             ) : null}
 
-            {!historyLoading && !historyErrorMessage && canLoadMoreHistory ? (
+            {historyLoadMoreErrorMessage ? (
+              <section className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                <p>{historyLoadMoreErrorMessage}</p>
+                <button
+                  type="button"
+                  onClick={() => void handleLoadMoreHistory()}
+                  disabled={historyLoadingMore || historyLoading}
+                  className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+                >
+                  {historyLoadingMore ? 'Retrying...' : 'Retry load more'}
+                </button>
+              </section>
+            ) : null}
+
+            {!historyLoading && !historyInitialErrorMessage && canLoadMoreHistory ? (
               <div className="border-t border-slate-100 px-5 py-4 text-right dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => void handleLoadMoreHistory()}
-                  disabled={historyLoadingMore}
+                  disabled={historyLoadingMore || historyLoading}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   {historyLoadingMore ? 'Loading...' : 'Load more'}
@@ -1214,6 +1384,16 @@ export function RecurringRulesPage(): JSX.Element {
           </section>
         )}
       </AppShell>
+
+      {successMessage ? (
+        <div
+          className="fixed right-4 top-4 z-[60] rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 shadow-lg dark:border-emerald-900/60 dark:bg-emerald-950/80 dark:text-emerald-300"
+          role="status"
+          aria-live="polite"
+        >
+          {successMessage}
+        </div>
+      ) : null}
 
       <RecurringRuleFormModal
         open={isFormOpen}

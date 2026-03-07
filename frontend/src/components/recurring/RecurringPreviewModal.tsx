@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiRecurringRule, RecurringPreviewResponse } from '../../types/finance';
 import { formatRecurringDateTime } from '../../utils/recurring';
 
@@ -20,45 +20,58 @@ export function RecurringPreviewModal({
   const [preview, setPreview] = useState<RecurringPreviewResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
+  const loadRequestIdRef = useRef<number>(0);
+
+  const loadPreviewForRule = useCallback(async (activeRule: ApiRecurringRule): Promise<void> => {
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
+
+    setPreview(null);
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await onLoadPreview(activeRule.id, PREVIEW_COUNT);
+      if (loadRequestIdRef.current !== requestId) {
+        return;
+      }
+      setPreview(response);
+    } catch (error) {
+      if (loadRequestIdRef.current !== requestId) {
+        return;
+      }
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Failed to load recurring preview.');
+      }
+    } finally {
+      if (loadRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
+    }
+  }, [onLoadPreview]);
 
   useEffect(() => {
     if (!open || !rule) {
+      loadRequestIdRef.current += 1;
       setPreview(null);
       setErrorMessage(null);
       setLoading(false);
       return;
     }
 
-    const activeRule = rule;
     let isMounted = true;
+    const activeRule = rule;
 
     async function load(): Promise<void> {
-      setLoading(true);
-      setErrorMessage(null);
-
-      try {
-        const response = await onLoadPreview(activeRule.id, PREVIEW_COUNT);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setPreview(response);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        } else {
-          setErrorMessage('Failed to load recurring preview.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      if (!isMounted) {
+        return;
       }
+
+      await loadPreviewForRule(activeRule);
     }
 
     void load();
@@ -66,7 +79,49 @@ export function RecurringPreviewModal({
     return () => {
       isMounted = false;
     };
-  }, [open, rule, onLoadPreview]);
+  }, [loadPreviewForRule, open, rule]);
+
+  useEffect(() => {
+    if (!open) {
+      if (triggerElementRef.current) {
+        triggerElementRef.current.focus();
+        triggerElementRef.current = null;
+      }
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    triggerElementRef.current = activeElement instanceof HTMLElement ? activeElement : null;
+
+    const timeoutId = window.setTimeout(() => {
+      closeButtonRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      event.preventDefault();
+      onClose();
+    }
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose, open]);
 
   if (!open || !rule) {
     return null;
@@ -93,6 +148,7 @@ export function RecurringPreviewModal({
           </div>
 
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
@@ -123,9 +179,19 @@ export function RecurringPreviewModal({
         ) : null}
 
         {errorMessage ? (
-          <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {errorMessage}
-          </p>
+          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">
+            <p>{errorMessage}</p>
+            <button
+              type="button"
+              onClick={() => {
+                void loadPreviewForRule(rule);
+              }}
+              disabled={loading}
+              className="mt-2 rounded-md bg-rose-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? 'Retrying...' : 'Retry preview'}
+            </button>
+          </div>
         ) : null}
 
         {!loading && !errorMessage ? (

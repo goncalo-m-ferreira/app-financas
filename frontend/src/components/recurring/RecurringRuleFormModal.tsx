@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type {
   ApiExpenseCategory,
   ApiRecurringRule,
@@ -232,6 +232,8 @@ export function RecurringRuleFormModal({
   const [preview, setPreview] = useState<RecurringPreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState<boolean>(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
 
   const expenseCategories = useMemo(
     () => categories.filter((category) => category.name.trim().length > 0),
@@ -240,6 +242,14 @@ export function RecurringRuleFormModal({
 
   const isEditMode = mode === 'edit';
   const activeRule = isEditMode ? rule : null;
+
+  function handleRequestClose(): void {
+    if (isSubmitting) {
+      return;
+    }
+
+    onClose();
+  }
 
   useEffect(() => {
     if (!open) {
@@ -312,6 +322,7 @@ export function RecurringRuleFormModal({
     let isMounted = true;
 
     async function loadPreview(): Promise<void> {
+      setPreview(null);
       setPreviewLoading(true);
       setPreviewError(null);
 
@@ -346,6 +357,64 @@ export function RecurringRuleFormModal({
       isMounted = false;
     };
   }, [open, isEditMode, activeRule, onLoadPreview]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    triggerElementRef.current = activeElement instanceof HTMLElement ? activeElement : null;
+
+    const timeoutId = window.setTimeout(() => {
+      closeButtonRef.current?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      return;
+    }
+
+    if (isSubmitting) {
+      setIsSubmitting(false);
+    }
+
+    setErrorMessage(null);
+    setPreview(null);
+    setPreviewError(null);
+    setPreviewLoading(false);
+
+    if (triggerElementRef.current) {
+      triggerElementRef.current.focus();
+      triggerElementRef.current = null;
+    }
+  }, [isSubmitting, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent): void {
+      if (event.key !== 'Escape' || isSubmitting) {
+        return;
+      }
+
+      event.preventDefault();
+      onClose();
+    }
+
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isSubmitting, onClose, open]);
 
   if (!open) {
     return null;
@@ -455,6 +524,7 @@ export function RecurringRuleFormModal({
       return;
     }
 
+    setPreview(null);
     setPreviewLoading(true);
     setPreviewError(null);
 
@@ -494,8 +564,9 @@ export function RecurringRuleFormModal({
               </p>
             </div>
             <button
+              ref={closeButtonRef}
               type="button"
-              onClick={onClose}
+              onClick={handleRequestClose}
               disabled={isSubmitting}
               className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
@@ -772,9 +843,20 @@ export function RecurringRuleFormModal({
                   </p>
 
                   {previewError ? (
-                    <p className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                      {previewError}
-                    </p>
+                    <div
+                      className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+                      role="alert"
+                    >
+                      <p>{previewError}</p>
+                      <button
+                        type="button"
+                        onClick={() => void handleRefreshPreview()}
+                        disabled={previewLoading}
+                        className="mt-2 rounded-md bg-rose-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {previewLoading ? 'Retrying...' : 'Retry preview'}
+                      </button>
+                    </div>
                   ) : null}
 
                   {!previewError ? (
@@ -827,7 +909,10 @@ export function RecurringRuleFormModal({
             ) : null}
 
             {errorMessage ? (
-              <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              <p
+                className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+                role="alert"
+              >
                 {errorMessage}
               </p>
             ) : null}
@@ -836,7 +921,7 @@ export function RecurringRuleFormModal({
           <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-700">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleRequestClose}
               disabled={isSubmitting}
               className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
