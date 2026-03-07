@@ -3,6 +3,8 @@ import type {
   ApiBudget,
   ApiExpenseCategory,
   ApiNotification,
+  ApiRecurringExecutionsResponse,
+  ApiRecurringRule,
   ApiReport,
   ApiTransaction,
   ApiUser,
@@ -13,6 +15,7 @@ import type {
   CreateBudgetInput,
   CreateExpenseCategoryInput,
   CreateReportInput,
+  CreateRecurringRuleInput,
   CreateTransactionInput,
   CreateWalletInput,
   DashboardApiData,
@@ -26,6 +29,10 @@ import type {
   UpdateCurrentUserInput,
   UpdateTransactionInput,
   UpdateWalletInput,
+  RecurringExecutionStatus,
+  RecurringPreviewResponse,
+  RecurringRuleStatus,
+  UpdateRecurringRuleInput,
 } from '../types/finance';
 
 type ApiErrorPayload = {
@@ -452,6 +459,111 @@ export async function fetchHomeInsights(
   });
 
   return requestJson<HomeInsightsResponse>(`/home/insights${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchRecurringRules(
+  token: string,
+  status?: RecurringRuleStatus,
+  signal?: AbortSignal,
+): Promise<ApiRecurringRule[]> {
+  const queryString = buildQueryString({
+    status,
+  });
+
+  return requestJson<ApiRecurringRule[]>(`/recurring-rules${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function createRecurringRule(
+  token: string,
+  payload: CreateRecurringRuleInput,
+): Promise<ApiRecurringRule> {
+  return requestJson<ApiRecurringRule>('/recurring-rules', {
+    method: 'POST',
+    token,
+    body: payload,
+  });
+}
+
+export async function updateRecurringRule(
+  token: string,
+  ruleId: string,
+  payload: UpdateRecurringRuleInput,
+): Promise<ApiRecurringRule> {
+  return requestJson<ApiRecurringRule>(`/recurring-rules/${ruleId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  });
+}
+
+export async function pauseRecurringRule(
+  token: string,
+  ruleId: string,
+  reason?: string,
+): Promise<ApiRecurringRule> {
+  return requestJson<ApiRecurringRule>(`/recurring-rules/${ruleId}/pause`, {
+    method: 'POST',
+    token,
+    body: {
+      reason,
+    },
+  });
+}
+
+export async function resumeRecurringRule(token: string, ruleId: string): Promise<ApiRecurringRule> {
+  return requestJson<ApiRecurringRule>(`/recurring-rules/${ruleId}/resume`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function cancelRecurringRule(token: string, ruleId: string): Promise<ApiRecurringRule> {
+  return requestJson<ApiRecurringRule>(`/recurring-rules/${ruleId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function fetchRecurringPreview(
+  token: string,
+  ruleId: string,
+  count = 12,
+  signal?: AbortSignal,
+): Promise<RecurringPreviewResponse> {
+  const queryString = buildQueryString({
+    count,
+  });
+
+  return requestJson<RecurringPreviewResponse>(`/recurring-rules/${ruleId}/preview${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchRecurringExecutions(
+  token: string,
+  options: {
+    ruleId?: string;
+    status?: RecurringExecutionStatus;
+    take?: number;
+    cursor?: string;
+  } = {},
+  signal?: AbortSignal,
+): Promise<ApiRecurringExecutionsResponse> {
+  const queryString = buildQueryString({
+    ruleId: options.ruleId,
+    status: options.status,
+    take: options.take,
+    cursor: options.cursor,
+  });
+
+  return requestJson<ApiRecurringExecutionsResponse>(`/recurring-executions${queryString}`, {
     token,
     signal,
   });

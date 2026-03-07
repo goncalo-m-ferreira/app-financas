@@ -22,6 +22,7 @@ enum NotificationType {
   BUDGET
   SYSTEM
   REPORT
+  RECURRING
 }
 
 enum UserRole {
@@ -29,38 +30,72 @@ enum UserRole {
   ADMIN
 }
 
+enum RecurringRuleStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+  COMPLETED
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum RecurringEndMode {
+  NONE
+  UNTIL_DATE
+  MAX_OCCURRENCES
+}
+
+enum RecurringExecutionStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum RecurringErrorType {
+  STRUCTURAL
+  TRANSIENT
+}
+
 model User {
-  id              String            @id @default(uuid())
-  name            String
-  email           String            @unique
-  passwordHash    String?           @map("password_hash")
-  googleId        String?           @unique @map("google_id")
-  avatarUrl       String?           @map("avatar_url")
-  defaultCurrency String            @default("EUR") @map("default_currency")
-  role            UserRole          @default(USER)
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  categories      ExpenseCategory[]
-  transactions    Transaction[]
-  budgets         Budget[]
-  wallets         Wallet[]
-  reports         Report[]
-  notifications   Notification[]
+  id                  String               @id @default(uuid())
+  name                String
+  email               String               @unique
+  passwordHash        String?              @map("password_hash")
+  googleId            String?              @unique @map("google_id")
+  avatarUrl           String?              @map("avatar_url")
+  defaultCurrency     String               @default("EUR") @map("default_currency")
+  role                UserRole             @default(USER)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  categories          ExpenseCategory[]
+  transactions        Transaction[]
+  budgets             Budget[]
+  wallets             Wallet[]
+  reports             Report[]
+  notifications       Notification[]
+  recurringRules      RecurringRule[]
+  recurringExecutions RecurringExecution[]
 
   @@map("users")
 }
 
 model ExpenseCategory {
-  id           String        @id @default(uuid())
-  userId       String        @map("user_id")
-  name         String
-  color        String?
-  icon         String?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[] @relation("CategoryTransactions")
-  budgets      Budget[]
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  name           String
+  color          String?
+  icon           String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]   @relation("CategoryTransactions")
+  budgets        Budget[]
+  recurringRules RecurringRule[]
 
   @@unique([userId, name], map: "expense_categories_user_id_name_key")
   @@unique([userId, id], map: "expense_categories_user_id_id_key")
@@ -68,23 +103,29 @@ model ExpenseCategory {
 }
 
 model Transaction {
-  id              String           @id @default(uuid())
-  userId          String           @map("user_id")
-  categoryId      String?          @map("category_id")
-  walletId        String?          @map("wallet_id")
-  type            TransactionType
-  amount          Decimal
-  description     String?
-  transactionDate DateTime         @map("transaction_date")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category        ExpenseCategory? @relation("CategoryTransactions", fields: [userId, categoryId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
-  wallet          Wallet?          @relation("WalletTransactions", fields: [userId, walletId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  id                   String              @id @default(uuid())
+  userId               String              @map("user_id")
+  categoryId           String?             @map("category_id")
+  walletId             String?             @map("wallet_id")
+  recurringRuleId      String?             @map("recurring_rule_id")
+  recurringExecutionId String?             @map("recurring_execution_id")
+  type                 TransactionType
+  amount               Decimal
+  description          String?
+  transactionDate      DateTime            @map("transaction_date")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category             ExpenseCategory?    @relation("CategoryTransactions", fields: [userId, categoryId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  wallet               Wallet?             @relation("WalletTransactions", fields: [userId, walletId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  recurringRule        RecurringRule?      @relation("RuleTransactions", fields: [userId, recurringRuleId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  recurringExecution   RecurringExecution? @relation("ExecutionTransactions", fields: [userId, recurringExecutionId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@unique([userId, recurringExecutionId], map: "transactions_user_id_recurring_execution_id_key")
   @@index([userId, transactionDate], map: "transactions_user_id_transaction_date_idx")
   @@index([userId, categoryId, transactionDate], map: "transactions_user_id_category_id_transaction_date_idx")
   @@index([userId, walletId, transactionDate], map: "transactions_user_id_wallet_id_transaction_date_idx")
+  @@index([userId, recurringRuleId, transactionDate], map: "transactions_user_id_recurring_rule_id_transaction_date_idx")
   @@map("transactions")
 }
 
@@ -104,15 +145,16 @@ model Budget {
 }
 
 model Wallet {
-  id           String        @id @default(uuid())
-  userId       String        @map("user_id")
-  name         String
-  balance      Decimal       @default(0)
-  color        String?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[] @relation("WalletTransactions")
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  name           String
+  balance        Decimal         @default(0)
+  color          String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]   @relation("WalletTransactions")
+  recurringRules RecurringRule[]
 
   @@unique([userId, name], map: "wallets_user_id_name_key")
   @@unique([userId, id], map: "wallets_user_id_id_key")
@@ -146,4 +188,69 @@ model Notification {
 
   @@index([userId, isRead, createdAt], map: "notifications_user_id_is_read_created_at_idx")
   @@map("notifications")
+}
+
+model RecurringRule {
+  id                   String               @id @default(uuid())
+  userId               String               @map("user_id")
+  walletId             String               @map("wallet_id")
+  categoryId           String?              @map("category_id")
+  type                 TransactionType
+  amount               Decimal
+  description          String?
+  isSubscription       Boolean              @default(false) @map("is_subscription")
+  timezone             String
+  frequency            RecurringFrequency
+  startAt              DateTime             @map("start_at")
+  nextRunAt            DateTime?            @map("next_run_at")
+  anchorDayOfMonth     Int?                 @map("anchor_day_of_month")
+  anchorWeekday        Int?                 @map("anchor_weekday")
+  anchorMonthOfYear    Int?                 @map("anchor_month_of_year")
+  anchorMinuteOfDay    Int                  @map("anchor_minute_of_day")
+  isLastDayAnchor      Boolean              @default(false) @map("is_last_day_anchor")
+  endMode              RecurringEndMode     @default(NONE) @map("end_mode")
+  endAt                DateTime?            @map("end_at")
+  maxOccurrences       Int?                 @map("max_occurrences")
+  occurrencesGenerated Int                  @default(0) @map("occurrences_generated")
+  status               RecurringRuleStatus  @default(ACTIVE)
+  pausedReason         String?              @map("paused_reason")
+  cancelledAt          DateTime?            @map("cancelled_at")
+  lastSuccessfulRunAt  DateTime?            @map("last_successful_run_at")
+  lastFailureAt        DateTime?            @map("last_failure_at")
+  failureCount         Int                  @default(0) @map("failure_count")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet               Wallet               @relation(fields: [userId, walletId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  category             ExpenseCategory?     @relation(fields: [userId, categoryId], references: [userId, id], onDelete: NoAction, onUpdate: NoAction)
+  executions           RecurringExecution[]
+  transactions         Transaction[]        @relation("RuleTransactions")
+
+  @@unique([userId, id], map: "recurring_rules_user_id_id_key")
+  @@index([userId, status, nextRunAt], map: "recurring_rules_user_id_status_next_run_at_idx")
+  @@index([userId, createdAt], map: "recurring_rules_user_id_created_at_idx")
+  @@map("recurring_rules")
+}
+
+model RecurringExecution {
+  id           String                   @id @default(uuid())
+  userId       String                   @map("user_id")
+  ruleId       String                   @map("rule_id")
+  scheduledFor DateTime                 @map("scheduled_for")
+  status       RecurringExecutionStatus
+  attemptCount Int                      @default(0) @map("attempt_count")
+  attemptedAt  DateTime?                @map("attempted_at")
+  errorType    RecurringErrorType?      @map("error_type")
+  errorMessage String?                  @map("error_message")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rule         RecurringRule            @relation(fields: [userId, ruleId], references: [userId, id], onDelete: Cascade, onUpdate: NoAction)
+  transaction  Transaction?             @relation("ExecutionTransactions")
+
+  @@unique([userId, id], map: "recurring_executions_user_id_id_key")
+  @@unique([ruleId, scheduledFor], map: "recurring_executions_rule_id_scheduled_for_key")
+  @@index([userId, createdAt], map: "recurring_executions_user_id_created_at_idx")
+  @@index([userId, status, createdAt], map: "recurring_executions_user_id_status_created_at_idx")
+  @@map("recurring_executions")
 }

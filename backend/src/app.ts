@@ -11,6 +11,7 @@ import { requestIdMiddleware } from './middlewares/request-id.js';
 import { healthRouter } from './routes/health.routes.js';
 import { homeRouter } from './routes/home.routes.js';
 import { notificationsRouter } from './routes/notifications.routes.js';
+import { recurringRulesRouter } from './routes/recurring-rules.routes.js';
 import { reportsRouter } from './routes/reports.routes.js';
 import { authTransactionsRouter } from './routes/transactions.routes.js';
 import { usersRouter } from './routes/users.routes.js';
@@ -41,6 +42,7 @@ app.use('/api', walletsRouter);
 app.use('/api', homeRouter);
 app.use('/api', reportsRouter);
 app.use('/api', notificationsRouter);
+app.use('/api', recurringRulesRouter);
 app.use('/api', usersRouter);
 
 app.use(notFoundHandler);

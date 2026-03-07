@@ -44,7 +44,7 @@ export type ApiNotification = {
   userId: string;
   title: string;
   message: string;
-  type: 'BUDGET' | 'SYSTEM' | 'REPORT';
+  type: 'BUDGET' | 'SYSTEM' | 'REPORT' | 'RECURRING';
   isRead: boolean;
   createdAt: string;
 };
@@ -275,4 +275,107 @@ export type ExpenseByCategoryDatum = {
 export type BalanceTrendDatum = {
   dateLabel: string;
   balance: number;
+};
+
+export type RecurringRuleStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'COMPLETED';
+export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+export type RecurringEndMode = 'NONE' | 'UNTIL_DATE' | 'MAX_OCCURRENCES';
+export type RecurringExecutionStatus = 'SUCCESS' | 'FAILED' | 'SKIPPED';
+
+export type ApiRecurringRule = {
+  id: string;
+  userId: string;
+  walletId: string;
+  categoryId: string | null;
+  type: 'INCOME' | 'EXPENSE';
+  amount: string;
+  description: string | null;
+  isSubscription: boolean;
+  timezone: string;
+  frequency: RecurringFrequency;
+  startAt: string;
+  nextRunAt: string | null;
+  anchorDayOfMonth: number | null;
+  anchorWeekday: number | null;
+  anchorMonthOfYear: number | null;
+  anchorMinuteOfDay: number;
+  isLastDayAnchor: boolean;
+  endMode: RecurringEndMode;
+  endAt: string | null;
+  maxOccurrences: number | null;
+  occurrencesGenerated: number;
+  status: RecurringRuleStatus;
+  pausedReason: string | null;
+  cancelledAt: string | null;
+  lastSuccessfulRunAt: string | null;
+  lastFailureAt: string | null;
+  failureCount: number;
+  createdAt: string;
+  updatedAt: string;
+  wallet: {
+    id: string;
+    name: string;
+    color: string | null;
+  };
+  category: {
+    id: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+  } | null;
+};
+
+export type ApiRecurringExecution = {
+  id: string;
+  userId: string;
+  ruleId: string;
+  scheduledFor: string;
+  status: RecurringExecutionStatus;
+  attemptCount: number;
+  attemptedAt: string | null;
+  errorType: 'STRUCTURAL' | 'TRANSIENT' | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApiRecurringExecutionsResponse = {
+  items: ApiRecurringExecution[];
+  nextCursor: string | null;
+};
+
+export type CreateRecurringRuleInput = {
+  type: 'INCOME' | 'EXPENSE';
+  amount: number;
+  description?: string;
+  walletId: string;
+  categoryId?: string | null;
+  isSubscription?: boolean;
+  timezone: string;
+  frequency: RecurringFrequency;
+  startAt: string;
+  endMode?: RecurringEndMode;
+  endAt?: string | null;
+  maxOccurrences?: number | null;
+};
+
+export type UpdateRecurringRuleInput = {
+  amount?: number;
+  description?: string | null;
+  walletId?: string;
+  categoryId?: string | null;
+  isSubscription?: boolean;
+  timezone?: string;
+  frequency?: RecurringFrequency;
+  startAt?: string;
+  endMode?: RecurringEndMode;
+  endAt?: string | null;
+  maxOccurrences?: number | null;
+};
+
+export type RecurringPreviewResponse = {
+  ruleId: string;
+  timezone: string;
+  nextRunAt: string | null;
+  occurrences: string[];
 };
