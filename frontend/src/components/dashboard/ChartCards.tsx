@@ -48,7 +48,7 @@ export function ChartCards({
       <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <header className="mb-4 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Assets
+            Expense Breakdown
           </h2>
           <span className="text-sm text-slate-500 dark:text-slate-400">Expenses by category</span>
         </header>
