@@ -33,10 +33,21 @@ export type ApiReport = {
   id: string;
   userId: string;
   name: string;
+  month: number;
+  year: number;
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
   fileUrl: string | null;
+  errorMessage: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ReportsStatusFilter = 'PENDING' | 'COMPLETED' | 'FAILED';
+
+export type ReportsQueryInput = {
+  status?: ReportsStatusFilter;
+  month?: number;
+  year?: number;
 };
 
 export type ApiNotification = {

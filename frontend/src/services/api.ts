@@ -35,6 +35,7 @@ import type {
   RecurringExecutionStatus,
   RecurringPreviewResponse,
   RecurringRuleStatus,
+  ReportsQueryInput,
   UpdateCurrentUserInput,
   UpdateBudgetInput,
   UpdateRecurringRuleInput,
@@ -160,6 +161,28 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   }
 
   return (await response.json()) as T;
+}
+
+async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: options.method ?? 'GET',
+    headers: buildHeaders(options),
+    body:
+      options.body === undefined
+        ? undefined
+        : isFormData(options.body)
+          ? options.body
+          : JSON.stringify(options.body),
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    const payload = await parseErrorPayload(response);
+
+    throw new ApiClientError(buildApiErrorMessage(path, payload), response.status, payload?.details);
+  }
+
+  return response.blob();
 }
 
 export function getStoredAuthToken(): string | null {
@@ -357,8 +380,18 @@ export async function createWallet(token: string, payload: CreateWalletInput): P
   });
 }
 
-export async function fetchReports(token: string, signal?: AbortSignal): Promise<ApiReport[]> {
-  return requestJson<ApiReport[]>('/reports', {
+export async function fetchReports(
+  token: string,
+  filters: ReportsQueryInput = {},
+  signal?: AbortSignal,
+): Promise<ApiReport[]> {
+  const queryString = buildQueryString({
+    status: filters.status,
+    month: filters.month,
+    year: filters.year,
+  });
+
+  return requestJson<ApiReport[]>(`/reports${queryString}`, {
     token,
     signal,
   });
@@ -416,6 +449,19 @@ export async function createReport(token: string, payload: CreateReportInput): P
     method: 'POST',
     token,
     body: payload,
+  });
+}
+
+export async function regenerateReport(token: string, reportId: string): Promise<ApiReport> {
+  return requestJson<ApiReport>(`/reports/${reportId}/regenerate`, {
+    method: 'POST',
+    token,
+  });
+}
+
+export async function downloadReport(token: string, reportId: string): Promise<Blob> {
+  return requestBlob(`/reports/${reportId}/download`, {
+    token,
   });
 }
 

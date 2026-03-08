@@ -166,8 +166,11 @@ model Report {
   id        String       @id @default(uuid())
   userId    String       @map("user_id")
   name      String
+  month     Int
+  year      Int
   status    ReportStatus @default(PENDING)
   fileUrl   String?      @map("file_url")
+  errorMessage String?   @map("error_message")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)

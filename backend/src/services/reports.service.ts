@@ -1,8 +1,8 @@
-import { createWriteStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { constants, createWriteStream } from 'node:fs';
+import { access, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import PDFDocument from 'pdfkit';
-import { type Prisma, type Report } from '@prisma/client';
+import { type Prisma, type Report, type ReportStatus } from '@prisma/client';
 import { env } from '../config/env.js';
 import { reportsPublicDir } from '../config/paths.js';
 import { AppError } from '../errors/app-error.js';
@@ -17,11 +17,22 @@ export type CreateReportInput = {
   year?: number;
 };
 
+export type ListReportsInput = {
+  status?: ReportStatus;
+  month?: number;
+  year?: number;
+};
+
 export type ReportQueueMessage = {
   reportId: string;
   userId: string;
   month: number;
   year: number;
+};
+
+export type ReportDownloadPayload = {
+  filePath: string;
+  downloadName: string;
 };
 
 type TransactionForReport = Prisma.TransactionGetPayload<{
@@ -56,6 +67,38 @@ function buildDefaultReportName(month: number, year: number): string {
   }).format(new Date(year, month - 1, 1));
 
   return `${monthLabel} ${year} Monthly Report`;
+}
+
+function buildSafeFailureMessage(error: unknown): string {
+  if (error instanceof AppError) {
+    if (error.statusCode >= 500) {
+      return 'Report generation failed due to a server error. Please try regenerate.';
+    }
+
+    const normalized = error.message.trim();
+    return normalized.length > 0
+      ? normalized.slice(0, 255)
+      : 'Report generation failed. Please try regenerate.';
+  }
+
+  return 'Report generation failed. Please try regenerate.';
+}
+
+function resolveDownloadName(reportName: string, month: number, year: number): string {
+  const trimmedName = reportName.trim();
+  const baseName = trimmedName.length > 0 ? trimmedName : `report-${month}-${year}`;
+  return baseName.toLowerCase().endsWith('.pdf') ? baseName : `${baseName}.pdf`;
+}
+
+function resolveReportFilePath(fileUrl: string): string {
+  const trimmed = fileUrl.trim();
+
+  if (trimmed.length === 0) {
+    throw new AppError('Report file is unavailable.', 404);
+  }
+
+  const safeName = path.basename(trimmed);
+  return path.resolve(reportsPublicDir, safeName);
 }
 
 function formatAmount(value: number, currency: string): string {
@@ -444,11 +487,30 @@ function wait(milliseconds: number): Promise<void> {
   });
 }
 
-export async function listReportsByUser(userId: string): Promise<Report[]> {
+export async function listReportsByUser(
+  userId: string,
+  filters: ListReportsInput = {},
+): Promise<Report[]> {
   await ensureUserExists(userId);
 
+  const where: Prisma.ReportWhereInput = {
+    userId,
+  };
+
+  if (filters.status !== undefined) {
+    where.status = filters.status;
+  }
+
+  if (filters.month !== undefined) {
+    where.month = filters.month;
+  }
+
+  if (filters.year !== undefined) {
+    where.year = filters.year;
+  }
+
   return prisma.report.findMany({
-    where: { userId },
+    where,
     orderBy: [{ createdAt: 'desc' }],
   });
 }
@@ -468,8 +530,11 @@ export async function createReportAndEnqueue(
     data: {
       userId,
       name: input.name?.trim() || buildDefaultReportName(month, year),
+      month,
+      year,
       status: 'PENDING',
       fileUrl: null,
+      errorMessage: null,
     },
   });
 
@@ -485,6 +550,7 @@ export async function createReportAndEnqueue(
       where: { id: report.id },
       data: {
         status: 'FAILED',
+        errorMessage: 'Failed to enqueue report generation.',
       },
     });
 
@@ -493,6 +559,92 @@ export async function createReportAndEnqueue(
   }
 
   return report;
+}
+
+export async function regenerateFailedReport(userId: string, reportId: string): Promise<Report> {
+  await ensureUserExists(userId);
+
+  const sourceReport = await prisma.report.findFirst({
+    where: {
+      id: reportId,
+      userId,
+    },
+  });
+
+  if (!sourceReport) {
+    throw new AppError('Report not found.', 404);
+  }
+
+  if (sourceReport.status !== 'FAILED') {
+    throw new AppError('Only failed reports can be regenerated.', 409);
+  }
+
+  const pendingForPeriod = await prisma.report.findFirst({
+    where: {
+      userId,
+      status: 'PENDING',
+      month: sourceReport.month,
+      year: sourceReport.year,
+    },
+    select: { id: true },
+  });
+
+  if (pendingForPeriod) {
+    throw new AppError('A pending report already exists for this period.', 409);
+  }
+
+  return createReportAndEnqueue(userId, {
+    name: sourceReport.name,
+    month: sourceReport.month,
+    year: sourceReport.year,
+  });
+}
+
+export async function getReportDownloadPayload(
+  userId: string,
+  reportId: string,
+): Promise<ReportDownloadPayload> {
+  await ensureUserExists(userId);
+
+  const report = await prisma.report.findFirst({
+    where: {
+      id: reportId,
+      userId,
+    },
+    select: {
+      id: true,
+      name: true,
+      month: true,
+      year: true,
+      status: true,
+      fileUrl: true,
+    },
+  });
+
+  if (!report) {
+    throw new AppError('Report not found.', 404);
+  }
+
+  if (report.status !== 'COMPLETED') {
+    throw new AppError('Report is not ready for download.', 409);
+  }
+
+  if (!report.fileUrl) {
+    throw new AppError('Report file is unavailable.', 404);
+  }
+
+  const filePath = resolveReportFilePath(report.fileUrl);
+
+  try {
+    await access(filePath, constants.R_OK);
+  } catch {
+    throw new AppError('Report file is no longer available. Please regenerate the report.', 404);
+  }
+
+  return {
+    filePath,
+    downloadName: resolveDownloadName(report.name, report.month, report.year),
+  };
 }
 
 export async function processReportJob(job: ReportQueueMessage): Promise<void> {
@@ -510,9 +662,11 @@ export async function processReportJob(job: ReportQueueMessage): Promise<void> {
   try {
     await wait(3000);
 
+    // Legacy rows are backfilled from created_at during migration and may be approximate.
+    // Newly created reports persist canonical request month/year in the report row itself.
     const { month, year, start, endExclusive } = resolveMonthYearRange({
-      month: job.month,
-      year: job.year,
+      month: report.month,
+      year: report.year,
     });
 
     const [user, transactions] = await Promise.all([
@@ -571,6 +725,7 @@ export async function processReportJob(job: ReportQueueMessage): Promise<void> {
       data: {
         status: 'COMPLETED',
         fileUrl: `/reports/${fileName}`,
+        errorMessage: null,
       },
     });
 
@@ -582,10 +737,13 @@ export async function processReportJob(job: ReportQueueMessage): Promise<void> {
       targetPath: '/reports',
     });
   } catch (error) {
+    const safeFailureMessage = buildSafeFailureMessage(error);
+
     await prisma.report.update({
       where: { id: report.id },
       data: {
         status: 'FAILED',
+        errorMessage: safeFailureMessage,
       },
     });
 
