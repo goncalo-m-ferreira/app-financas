@@ -53,7 +53,7 @@ export function TransactionsList({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[56px_minmax(0,1fr)_96px_96px_96px_auto] items-center gap-2.5 py-3 text-sm"
+                    className="grid grid-cols-[56px_minmax(0,1fr)_max-content_auto] items-center gap-3 py-3 text-sm"
                   >
                     <span className="text-xs text-slate-400 dark:text-slate-500">{item.timeLabel}</span>
 
@@ -73,29 +73,31 @@ export function TransactionsList({
                       </div>
                     </div>
 
-                    {item.badgeLabel ? (
+                    <div className="grid grid-cols-[96px_108px_96px] items-center gap-2.5">
+                      {item.badgeLabel ? (
+                        <span
+                          className="justify-self-end rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
+                          style={{ backgroundColor: `${item.badgeColor}33` }}
+                        >
+                          {item.badgeLabel}
+                        </span>
+                      ) : (
+                        <span className="justify-self-end" />
+                      )}
+
                       <span
-                        className="justify-self-end rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
-                        style={{ backgroundColor: `${item.badgeColor}33` }}
+                        className={[
+                          'whitespace-nowrap text-right font-semibold tabular-nums',
+                          item.amountValue < 0 ? 'text-slate-700 dark:text-slate-200' : 'text-emerald-600',
+                        ].join(' ')}
                       >
-                        {item.badgeLabel}
+                        {item.amountLabel}
                       </span>
-                    ) : (
-                      <span />
-                    )}
 
-                    <span
-                      className={[
-                        'whitespace-nowrap text-right font-semibold tabular-nums',
-                        item.amountValue < 0 ? 'text-slate-700 dark:text-slate-200' : 'text-emerald-600',
-                      ].join(' ')}
-                    >
-                      {item.amountLabel}
-                    </span>
-
-                    <span className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
-                      {item.accountLabel}
-                    </span>
+                      <span className="whitespace-nowrap text-left text-xs text-slate-500 dark:text-slate-400">
+                        {item.accountLabel}
+                      </span>
+                    </div>
 
                     <div className="flex items-center justify-end gap-1">
                       <button
