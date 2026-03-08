@@ -14,7 +14,7 @@ type NavItem = {
 
 const primaryItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: <DotIcon />, href: '/' },
-  { id: 'dashboard', label: 'Assets & Investments', icon: <PieIcon />, href: '/dashboard' },
+  { id: 'dashboard', label: 'Financial Overview', icon: <PieIcon />, href: '/dashboard' },
   { id: 'accounts', label: 'Accounts & Cards', icon: <CardIcon />, href: '/accounts' },
   { id: 'budgets', label: 'Budget', icon: <WalletIcon />, href: '/budgets' },
   { id: 'recurring', label: 'Recurring Rules', icon: <RepeatIcon />, href: '/recurring-rules' },
@@ -181,7 +181,7 @@ function SidebarContent({
         onClick={onToggleTheme}
         className="mt-8 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
-        <span>Switch to dark</span>
+        <span>Dark mode</span>
         <span className={['h-5 w-9 rounded-full p-0.5 transition', isDarkMode ? 'bg-cyan-400' : 'bg-slate-900'].join(' ')}>
           <span
             className={[

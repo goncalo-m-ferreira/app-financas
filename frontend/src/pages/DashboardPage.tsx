@@ -34,10 +34,12 @@ import {
   formatTotalBalance,
 } from '../utils/dashboard';
 
+const SUCCESS_TOAST_TTL_MS = 2600;
+
 const INITIAL_DASHBOARD: DashboardApiData = {
   user: {
     id: '',
-    name: 'Utilizador',
+    name: 'User',
     email: '',
     role: 'USER',
     defaultCurrency: 'EUR',
@@ -64,6 +66,7 @@ export function DashboardPage(): JSX.Element {
   const [dashboard, setDashboard] = useState<DashboardApiData>(INITIAL_DASHBOARD);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
@@ -116,7 +119,7 @@ export function DashboardPage(): JSX.Element {
           return;
         }
 
-        setErrorMessage('Falha inesperada ao carregar dashboard.');
+        setErrorMessage('Unexpected error while loading dashboard.');
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -132,15 +135,49 @@ export function DashboardPage(): JSX.Element {
     };
   }, [month, reloadKey, searchQuery, token, year]);
 
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, SUCCESS_TOAST_TTL_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [successMessage]);
+
   const currency = dashboard.user.defaultCurrency || user?.defaultCurrency || 'EUR';
+  const totalBalanceValue = useMemo(
+    () => calculateTotalBalance(dashboard.transactions),
+    [dashboard.transactions],
+  );
   const totalBalanceLabel = useMemo(() => {
-    const totalBalance = calculateTotalBalance(dashboard.transactions);
-    return formatTotalBalance(totalBalance, currency);
-  }, [currency, dashboard.transactions]);
+    return formatTotalBalance(totalBalanceValue, currency);
+  }, [currency, totalBalanceValue]);
 
   const expenseByCategory = useMemo(
     () => buildExpenseByCategoryData(dashboard.transactions, dashboard.categories),
     [dashboard.categories, dashboard.transactions],
+  );
+  const totalExpenses = useMemo(
+    () =>
+      dashboard.transactions.reduce((total, transaction) => {
+        if (transaction.type !== 'EXPENSE') {
+          return total;
+        }
+
+        const amount = Number.parseFloat(transaction.amount);
+
+        if (!Number.isFinite(amount)) {
+          return total;
+        }
+
+        return total + Math.max(amount, 0);
+      }, 0),
+    [dashboard.transactions],
   );
 
   const balanceTrend = useMemo(() => buildBalanceTrendData(dashboard.transactions), [dashboard.transactions]);
@@ -156,7 +193,7 @@ export function DashboardPage(): JSX.Element {
 
   async function handleCreateTransaction(payload: CreateTransactionInput): Promise<void> {
     if (!token) {
-      throw new Error('Sessão expirada. Faz login novamente.');
+      throw new Error('Session expired. Please sign in again.');
     }
 
     const createdTransaction = await createTransaction(token, payload);
@@ -306,11 +343,12 @@ export function DashboardPage(): JSX.Element {
 
   async function handleImportTransactions(payload: ImportTransactionsInput): Promise<void> {
     if (!token) {
-      throw new Error('Sessão expirada. Faz login novamente.');
+      throw new Error('Session expired. Please sign in again.');
     }
 
+    setErrorMessage(null);
     const result = await importTransactionsCsv(token, payload);
-    window.alert(`${result.importedCount} transações importadas com sucesso!`);
+    setSuccessMessage(`${result.importedCount} transactions imported successfully.`);
     setReloadKey((value) => value + 1);
   }
 
@@ -324,13 +362,14 @@ export function DashboardPage(): JSX.Element {
       <AppShell activeItem="dashboard">
         <TopHeader
           balanceLabel={totalBalanceLabel}
+          isBalanceNegative={totalBalanceValue < 0}
           onAddTransaction={() => setIsModalOpen(true)}
           onImportCsv={() => setIsImportModalOpen(true)}
         />
 
         {loading ? (
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-            A carregar dados da API...
+            Loading dashboard data...
           </div>
         ) : null}
 
@@ -342,7 +381,7 @@ export function DashboardPage(): JSX.Element {
               onClick={() => setReloadKey((value) => value + 1)}
               className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
             >
-              Tentar novamente
+              Retry
             </button>
           </section>
         ) : null}
@@ -352,6 +391,7 @@ export function DashboardPage(): JSX.Element {
             <ChartCards
               expenseByCategory={expenseByCategory}
               balanceTrend={balanceTrend}
+              totalExpenses={totalExpenses}
               currency={currency}
               isDarkMode={isDarkMode}
             />
@@ -402,6 +442,16 @@ export function DashboardPage(): JSX.Element {
           void handleConfirmDeleteTransaction();
         }}
       />
+
+      {successMessage ? (
+        <div
+          className="fixed right-4 top-4 z-[60] rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 shadow-lg dark:border-emerald-900/60 dark:bg-emerald-950/80 dark:text-emerald-300"
+          role="status"
+          aria-live="polite"
+        >
+          {successMessage}
+        </div>
+      ) : null}
     </>
   );
 }

@@ -5,12 +5,14 @@ import { useDebounce } from '../../hooks/useDebounce';
 
 type TopHeaderProps = {
   balanceLabel: string;
+  isBalanceNegative: boolean;
   onAddTransaction: () => void;
   onImportCsv: () => void;
 };
 
 export function TopHeader({
   balanceLabel,
+  isBalanceNegative,
   onAddTransaction,
   onImportCsv,
 }: TopHeaderProps): JSX.Element {
@@ -32,16 +34,23 @@ export function TopHeader({
 
   return (
     <header className="rounded-2xl border border-slate-200/70 bg-white/75 px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-950/45 dark:shadow-[0_24px_45px_rgba(2,6,23,0.65)] lg:px-6 lg:py-6">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,460px)_minmax(0,1fr)] xl:items-center">
-        <div className="flex flex-col justify-center gap-1">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,460px)_auto] xl:items-center">
+        <div className="flex flex-col justify-center gap-1.5">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-            Assets & Investments
+            Financial Overview
           </p>
-          <p className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          <p
+            className={[
+              'text-3xl font-semibold tracking-tight',
+              isBalanceNegative
+                ? 'text-rose-600 dark:text-rose-300'
+                : 'text-slate-900 dark:text-slate-100',
+            ].join(' ')}
+          >
             {balanceLabel}
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Your Total Balance for the Selected Month
+            Your balance, category spending, and recent activity for the selected month.
           </p>
         </div>
 
@@ -59,30 +68,8 @@ export function TopHeader({
           />
         </label>
 
-        <div className="flex flex-wrap items-center gap-4 xl:justify-end">
-          <MonthYearSelector variant="dashboardTopbar" />
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              title="Coming Soon"
-              aria-label="Notifications (Coming Soon)"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/70 bg-white/75 text-slate-500 opacity-40 shadow-sm disabled:cursor-not-allowed dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400"
-            >
-              <BellIcon />
-            </button>
-
-            <button
-              type="button"
-              disabled
-              title="Coming Soon"
-              aria-label="Open quick actions (Coming Soon)"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/70 bg-white/75 text-slate-500 opacity-40 shadow-sm disabled:cursor-not-allowed dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400"
-            >
-              <GridIcon />
-            </button>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap xl:justify-end">
+          <MonthYearSelector variant="dashboardTopbar" className="shrink-0" />
 
           <button
             type="button"
@@ -111,31 +98,6 @@ function SearchIcon(): JSX.Element {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="2" />
       <path d="m20 20-4.2-4.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BellIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 4a4 4 0 0 0-4 4v3.7L6 14v1h12v-1l-2-2.3V8a4 4 0 0 0-4-4z" stroke="currentColor" strokeWidth="2" />
-      <path d="M10 18a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function GridIcon(): JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4" y="4" width="4" height="4" fill="currentColor" />
-      <rect x="10" y="4" width="4" height="4" fill="currentColor" />
-      <rect x="16" y="4" width="4" height="4" fill="currentColor" />
-      <rect x="4" y="10" width="4" height="4" fill="currentColor" />
-      <rect x="10" y="10" width="4" height="4" fill="currentColor" />
-      <rect x="16" y="10" width="4" height="4" fill="currentColor" />
-      <rect x="4" y="16" width="4" height="4" fill="currentColor" />
-      <rect x="10" y="16" width="4" height="4" fill="currentColor" />
-      <rect x="16" y="16" width="4" height="4" fill="currentColor" />
     </svg>
   );
 }

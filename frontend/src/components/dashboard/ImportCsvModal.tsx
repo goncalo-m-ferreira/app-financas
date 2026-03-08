@@ -41,22 +41,22 @@ export function ImportCsvModal({
     setErrorMessage(null);
 
     if (!walletId) {
-      setErrorMessage('Seleciona uma wallet para o import.');
+      setErrorMessage('Select a wallet for import.');
       return;
     }
 
     if (!file) {
-      setErrorMessage('Seleciona um ficheiro CSV.');
+      setErrorMessage('Select a CSV file.');
       return;
     }
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
-      setErrorMessage('Formato inválido. Seleciona um ficheiro .csv.');
+      setErrorMessage('Invalid format. Select a .csv file.');
       return;
     }
 
     if (file.size > MAX_CLIENT_CSV_SIZE_BYTES) {
-      setErrorMessage('CSV excede o tamanho máximo permitido (2MB).');
+      setErrorMessage('CSV exceeds the maximum allowed size (2MB).');
       return;
     }
 
@@ -74,7 +74,7 @@ export function ImportCsvModal({
       if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage('Falha ao importar CSV.');
+        setErrorMessage('Failed to import CSV.');
       }
     } finally {
       setIsSubmitting(false);
