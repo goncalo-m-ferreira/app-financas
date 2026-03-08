@@ -53,7 +53,7 @@ export function TransactionsList({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[56px_1fr_auto_auto_auto_auto] items-center gap-3 py-3 text-sm"
+                    className="grid grid-cols-[56px_minmax(0,1fr)_128px_124px_96px_auto] items-center gap-3 py-3 text-sm"
                   >
                     <span className="text-xs text-slate-400 dark:text-slate-500">{item.timeLabel}</span>
 
@@ -73,18 +73,9 @@ export function TransactionsList({
                       </div>
                     </div>
 
-                    <span
-                      className={[
-                        'whitespace-nowrap font-semibold',
-                        item.amountValue < 0 ? 'text-slate-700 dark:text-slate-200' : 'text-emerald-600',
-                      ].join(' ')}
-                    >
-                      {item.amountLabel}
-                    </span>
-
                     {item.badgeLabel ? (
                       <span
-                        className="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
+                        className="justify-self-end rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
                         style={{ backgroundColor: `${item.badgeColor}33` }}
                       >
                         {item.badgeLabel}
@@ -92,6 +83,15 @@ export function TransactionsList({
                     ) : (
                       <span />
                     )}
+
+                    <span
+                      className={[
+                        'whitespace-nowrap text-right font-semibold tabular-nums',
+                        item.amountValue < 0 ? 'text-slate-700 dark:text-slate-200' : 'text-emerald-600',
+                      ].join(' ')}
+                    >
+                      {item.amountLabel}
+                    </span>
 
                     <span className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                       {item.accountLabel}
