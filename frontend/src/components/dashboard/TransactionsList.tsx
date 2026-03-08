@@ -53,7 +53,7 @@ export function TransactionsList({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[56px_minmax(0,1fr)_128px_124px_96px_auto] items-center gap-3 py-3 text-sm"
+                    className="grid grid-cols-[56px_minmax(0,1fr)_96px_96px_96px_auto] items-center gap-2.5 py-3 text-sm"
                   >
                     <span className="text-xs text-slate-400 dark:text-slate-500">{item.timeLabel}</span>
 
