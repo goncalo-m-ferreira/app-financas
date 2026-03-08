@@ -27,6 +27,10 @@ import type {
   ImportTransactionsResult,
   LoginInput,
   MonthYearFilter,
+  NotificationsListResponse,
+  NotificationsMarkAllAsReadResponse,
+  NotificationsQueryInput,
+  NotificationsUnreadCountResponse,
   RegisterInput,
   RecurringExecutionStatus,
   RecurringPreviewResponse,
@@ -121,7 +125,7 @@ function buildApiErrorMessage(path: string, payload: ApiErrorPayload | null): st
   return `${fallbackMessage} (${firstDetail.message})`;
 }
 
-function buildQueryString(params: Record<string, string | number | undefined>): string {
+function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -362,9 +366,27 @@ export async function fetchReports(token: string, signal?: AbortSignal): Promise
 
 export async function fetchNotifications(
   token: string,
+  filters: NotificationsQueryInput = {},
   signal?: AbortSignal,
-): Promise<ApiNotification[]> {
-  return requestJson<ApiNotification[]>('/notifications', {
+): Promise<NotificationsListResponse> {
+  const queryString = buildQueryString({
+    isRead: filters.isRead,
+    type: filters.type,
+    take: filters.take,
+    cursor: filters.cursor,
+  });
+
+  return requestJson<NotificationsListResponse>(`/notifications${queryString}`, {
+    token,
+    signal,
+  });
+}
+
+export async function fetchUnreadNotificationsCount(
+  token: string,
+  signal?: AbortSignal,
+): Promise<NotificationsUnreadCountResponse> {
+  return requestJson<NotificationsUnreadCountResponse>('/notifications/unread-count', {
     token,
     signal,
   });
@@ -375,6 +397,15 @@ export async function markNotificationAsRead(
   notificationId: string,
 ): Promise<ApiNotification> {
   return requestJson<ApiNotification>(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+    token,
+  });
+}
+
+export async function markAllNotificationsAsRead(
+  token: string,
+): Promise<NotificationsMarkAllAsReadResponse> {
+  return requestJson<NotificationsMarkAllAsReadResponse>('/notifications/read-all', {
     method: 'PATCH',
     token,
   });

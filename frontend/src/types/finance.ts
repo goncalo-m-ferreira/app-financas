@@ -44,9 +44,34 @@ export type ApiNotification = {
   userId: string;
   title: string;
   message: string;
+  targetPath?: string | null;
   type: 'BUDGET' | 'SYSTEM' | 'REPORT' | 'RECURRING';
   isRead: boolean;
   createdAt: string;
+};
+
+export type NotificationsTypeFilter = 'BUDGET' | 'SYSTEM' | 'REPORT' | 'RECURRING';
+
+export type NotificationsReadFilter = boolean | undefined;
+
+export type NotificationsQueryInput = {
+  isRead?: NotificationsReadFilter;
+  type?: NotificationsTypeFilter;
+  take?: number;
+  cursor?: string;
+};
+
+export type NotificationsListResponse = {
+  items: ApiNotification[];
+  nextCursor: string | null;
+};
+
+export type NotificationsUnreadCountResponse = {
+  unreadCount: number;
+};
+
+export type NotificationsMarkAllAsReadResponse = {
+  updatedCount: number;
 };
 
 export type ApiTransaction = {

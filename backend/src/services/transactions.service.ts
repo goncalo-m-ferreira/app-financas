@@ -729,17 +729,24 @@ async function createBudgetAlertIfNeeded(params: {
   }
 
   const usageRatio = spentAmount / budgetAmount;
+  const alertLevel = usageRatio >= 1 ? 'EXCEEDED' : usageRatio >= 0.8 ? 'WARNING' : null;
 
-  if (usageRatio < 0.9) {
+  if (!alertLevel) {
     return;
   }
+
+  const notificationTitle = alertLevel === 'EXCEEDED' ? 'Budget Exceeded' : 'Budget Warning';
+  const notificationMessage =
+    alertLevel === 'EXCEEDED'
+      ? `Your spending exceeded the budget for ${budget.category.name}.`
+      : `You have used 80% or more of your budget for ${budget.category.name}.`;
 
   const existingAlert = await prisma.notification.findFirst({
     where: {
       userId: params.userId,
       type: 'BUDGET',
-      title: 'Budget Alert',
-      message: `You have used over 90% of your budget for ${budget.category.name}.`,
+      title: notificationTitle,
+      message: notificationMessage,
       createdAt: {
         gte: start,
         lt: endExclusive,
@@ -754,9 +761,10 @@ async function createBudgetAlertIfNeeded(params: {
 
   await createNotification({
     userId: params.userId,
-    title: 'Budget Alert',
-    message: `You have used over 90% of your budget for ${budget.category.name}.`,
+    title: notificationTitle,
+    message: notificationMessage,
     type: 'BUDGET',
+    targetPath: '/budgets',
   });
 }
 

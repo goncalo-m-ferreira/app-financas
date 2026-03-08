@@ -579,6 +579,7 @@ export async function processReportJob(job: ReportQueueMessage): Promise<void> {
       title: 'Report Ready',
       message: 'Your monthly statement is ready to download in the Reports tab.',
       type: 'REPORT',
+      targetPath: '/reports',
     });
   } catch (error) {
     await prisma.report.update({
@@ -587,6 +588,18 @@ export async function processReportJob(job: ReportQueueMessage): Promise<void> {
         status: 'FAILED',
       },
     });
+
+    try {
+      await createNotification({
+        userId: report.userId,
+        title: 'Report Failed',
+        message: 'We could not generate your monthly statement. Please try again in Reports.',
+        type: 'REPORT',
+        targetPath: '/reports',
+      });
+    } catch (notificationError) {
+      console.error('[reports] failed to create report failure notification', notificationError);
+    }
 
     throw error;
   }

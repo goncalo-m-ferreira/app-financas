@@ -7,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { fetchNotifications } from '../services/api';
+import { fetchUnreadNotificationsCount } from '../services/api';
 import { useAuth } from './AuthContext';
 
 type NotificationContextValue = {
@@ -30,8 +30,8 @@ export function NotificationProvider({ children }: PropsWithChildren): JSX.Eleme
       return;
     }
 
-    const notifications = await fetchNotifications(token);
-    setUnreadCount(notifications.filter((notification) => !notification.isRead).length);
+    const response = await fetchUnreadNotificationsCount(token);
+    setUnreadCount(response.unreadCount);
   }, [token]);
 
   const markOneAsReadLocally = useCallback(() => {
@@ -46,9 +46,9 @@ export function NotificationProvider({ children }: PropsWithChildren): JSX.Eleme
 
     const controller = new AbortController();
 
-    fetchNotifications(token, controller.signal)
-      .then((notifications) => {
-        setUnreadCount(notifications.filter((notification) => !notification.isRead).length);
+    fetchUnreadNotificationsCount(token, controller.signal)
+      .then((response) => {
+        setUnreadCount(response.unreadCount);
       })
       .catch(() => {
         setUnreadCount(0);

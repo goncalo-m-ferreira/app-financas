@@ -66,6 +66,7 @@ const {
   prismaMock,
   createTransactionInTxMock,
   createBudgetAlertForTransactionMock,
+  createNotificationMock,
 } = vi.hoisted(() => ({
   prismaMock: {
     recurringRule: {
@@ -91,6 +92,7 @@ const {
   },
   createTransactionInTxMock: vi.fn(),
   createBudgetAlertForTransactionMock: vi.fn(),
+  createNotificationMock: vi.fn(),
 }));
 
 vi.mock('../src/lib/prisma.js', () => ({
@@ -100,6 +102,10 @@ vi.mock('../src/lib/prisma.js', () => ({
 vi.mock('../src/services/transactions.service.js', () => ({
   createTransactionInTx: createTransactionInTxMock,
   createBudgetAlertForTransaction: createBudgetAlertForTransactionMock,
+}));
+
+vi.mock('../src/services/notifications.service.js', () => ({
+  createNotification: createNotificationMock,
 }));
 
 import { runRecurringMaterializationCycle } from '../src/services/recurring-execution.service.js';
@@ -340,6 +346,7 @@ describe('recurring execution materialization cycle', () => {
     });
 
     createBudgetAlertForTransactionMock.mockResolvedValue(undefined);
+    createNotificationMock.mockResolvedValue(undefined);
   });
 
   test('duplicate attempt for same occurrence is idempotent and creates no duplicate transaction', async () => {
@@ -447,6 +454,45 @@ describe('recurring execution materialization cycle', () => {
     expect(execution.errorType).toBe('TRANSIENT');
   });
 
+  test('transient recurring failures notify once per unresolved failure streak', async () => {
+    const scheduledFor = new Date('2026-01-05T10:00:00.000Z');
+    state.rules.set(
+      'rule-transient-dedup',
+      buildRule({
+        id: 'rule-transient-dedup',
+        nextRunAt: scheduledFor,
+      }),
+    );
+
+    createTransactionInTxMock.mockRejectedValue(new Error('temporary outage'));
+
+    const firstCycle = await runRecurringMaterializationCycle({
+      maxExecutionsPerRulePerCycle: 1,
+      maxExecutionsPerCycle: 1,
+    });
+
+    expect(firstCycle.transientFailures).toBe(1);
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+    expect(createNotificationMock).toHaveBeenNthCalledWith(1, {
+      userId: 'user-1',
+      title: 'Recurring Rule Failed',
+      message: expect.stringContaining('will be retried automatically'),
+      type: 'RECURRING',
+      targetPath: '/recurring-rules',
+    });
+
+    vi.setSystemTime(new Date('2026-01-05T12:06:00.000Z'));
+
+    const secondCycle = await runRecurringMaterializationCycle({
+      maxExecutionsPerRulePerCycle: 1,
+      maxExecutionsPerCycle: 1,
+      retryBackoffMs: 5 * 60 * 1000,
+    });
+
+    expect(secondCycle.transientFailures).toBe(1);
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+  });
+
   test('paused/cancelled/completed rules are ignored', async () => {
     state.rules.set(
       'rule-active',
@@ -544,6 +590,13 @@ describe('recurring execution materialization cycle', () => {
     expect(execution.status).toBe('FAILED');
     expect(execution.errorType).toBe('STRUCTURAL');
     expect(createTransactionInTxMock).not.toHaveBeenCalled();
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      userId: 'user-1',
+      title: 'Recurring Rule Paused',
+      message: expect.stringContaining('auto-paused'),
+      type: 'RECURRING',
+      targetPath: '/recurring-rules',
+    });
   });
 
   test('retry gate blocks immediate retry and allows retry after backoff', async () => {

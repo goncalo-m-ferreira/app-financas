@@ -1,12 +1,35 @@
-import { type Notification, type NotificationType } from '@prisma/client';
+import { Prisma, type Notification, type NotificationType } from '@prisma/client';
 import { AppError } from '../errors/app-error.js';
 import { prisma } from '../lib/prisma.js';
+
+const DEFAULT_NOTIFICATIONS_TAKE = 25;
 
 export type CreateNotificationInput = {
   userId: string;
   title: string;
   message: string;
   type: NotificationType;
+  targetPath?: string | null;
+};
+
+export type ListNotificationsInput = {
+  isRead?: boolean;
+  type?: NotificationType;
+  take?: number;
+  cursor?: string;
+};
+
+export type ListNotificationsResponse = {
+  items: Notification[];
+  nextCursor: string | null;
+};
+
+export type UnreadNotificationsCountResponse = {
+  unreadCount: number;
+};
+
+export type MarkAllNotificationsAsReadResponse = {
+  updatedCount: number;
 };
 
 async function ensureUserExists(userId: string): Promise<void> {
@@ -20,13 +43,87 @@ async function ensureUserExists(userId: string): Promise<void> {
   }
 }
 
-export async function listNotificationsByUser(userId: string): Promise<Notification[]> {
+export async function listNotificationsByUser(
+  userId: string,
+  input: ListNotificationsInput = {},
+): Promise<ListNotificationsResponse> {
   await ensureUserExists(userId);
 
-  return prisma.notification.findMany({
-    where: { userId },
-    orderBy: [{ createdAt: 'desc' }],
+  const take = input.take ?? DEFAULT_NOTIFICATIONS_TAKE;
+  const where: Prisma.NotificationWhereInput = {
+    userId,
+  };
+
+  if (input.isRead !== undefined) {
+    where.isRead = input.isRead;
+  }
+
+  if (input.type !== undefined) {
+    where.type = input.type;
+  }
+
+  if (input.cursor) {
+    const cursorNotification = await prisma.notification.findFirst({
+      where: {
+        id: input.cursor,
+        userId,
+      },
+      select: {
+        id: true,
+        createdAt: true,
+      },
+    });
+
+    if (!cursorNotification) {
+      throw new AppError('Notification cursor not found.', 404);
+    }
+
+    where.OR = [
+      {
+        createdAt: {
+          lt: cursorNotification.createdAt,
+        },
+      },
+      {
+        createdAt: cursorNotification.createdAt,
+        id: {
+          lt: cursorNotification.id,
+        },
+      },
+    ];
+  }
+
+  const rows = await prisma.notification.findMany({
+    where,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: take + 1,
   });
+
+  const hasNextPage = rows.length > take;
+  const items = hasNextPage ? rows.slice(0, take) : rows;
+  const nextCursor = hasNextPage ? items[items.length - 1]?.id ?? null : null;
+
+  return {
+    items,
+    nextCursor,
+  };
+}
+
+export async function getUnreadNotificationsCount(
+  userId: string,
+): Promise<UnreadNotificationsCountResponse> {
+  await ensureUserExists(userId);
+
+  const unreadCount = await prisma.notification.count({
+    where: {
+      userId,
+      isRead: false,
+    },
+  });
+
+  return {
+    unreadCount,
+  };
 }
 
 export async function markNotificationAsRead(
@@ -66,8 +163,29 @@ export async function createNotification(input: CreateNotificationInput): Promis
       userId: input.userId,
       title: input.title,
       message: input.message,
+      targetPath: input.targetPath ?? null,
       type: input.type,
       isRead: false,
     },
   });
+}
+
+export async function markAllNotificationsAsRead(
+  userId: string,
+): Promise<MarkAllNotificationsAsReadResponse> {
+  await ensureUserExists(userId);
+
+  const result = await prisma.notification.updateMany({
+    where: {
+      userId,
+      isRead: false,
+    },
+    data: {
+      isRead: true,
+    },
+  });
+
+  return {
+    updatedCount: result.count,
+  };
 }

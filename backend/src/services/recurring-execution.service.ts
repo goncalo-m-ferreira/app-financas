@@ -11,6 +11,7 @@ import {
   resolveNextRunAt,
   type RecurringScheduleConfig,
 } from '../utils/recurring-schedule.js';
+import { createNotification } from './notifications.service.js';
 import { createBudgetAlertForTransaction, createTransactionInTx } from './transactions.service.js';
 
 export const DEFAULT_MAX_EXECUTIONS_PER_RULE_PER_CYCLE = 24;
@@ -70,6 +71,14 @@ type MaterializationOutcome =
     };
 
 type ErrorClassification = 'TRANSIENT' | 'STRUCTURAL' | 'IDEMPOTENT_DUPLICATE';
+
+type RecurringFailureNotificationContext = {
+  userId: string;
+  ruleDescription: string | null;
+  errorType: RecurringErrorType;
+  reason: string;
+  shouldNotify: boolean;
+};
 
 function toRecurringScheduleConfig(rule: RecurringRule): RecurringScheduleConfig {
   return {
@@ -207,6 +216,43 @@ function buildExecutionErrorMessage(error: unknown): string {
   return 'Falha durante materialização recorrente.';
 }
 
+function buildRecurringNotificationMessage(context: RecurringFailureNotificationContext): string {
+  const label = context.ruleDescription?.trim() || 'A recurring rule';
+  const reason = context.reason.trim().length > 0 ? context.reason.trim() : 'Unknown reason';
+
+  if (context.errorType === 'STRUCTURAL') {
+    return `${label} was auto-paused due to a structural failure: ${reason}`;
+  }
+
+  return `${label} failed to execute and will be retried automatically: ${reason}`;
+}
+
+async function createRecurringFailureNotification(
+  context: RecurringFailureNotificationContext,
+): Promise<void> {
+  await createNotification({
+    userId: context.userId,
+    title: context.errorType === 'STRUCTURAL' ? 'Recurring Rule Paused' : 'Recurring Rule Failed',
+    message: buildRecurringNotificationMessage(context),
+    type: 'RECURRING',
+    targetPath: '/recurring-rules',
+  });
+}
+
+async function sendRecurringFailureNotificationBestEffort(
+  context: RecurringFailureNotificationContext,
+): Promise<void> {
+  if (!context.shouldNotify) {
+    return;
+  }
+
+  try {
+    await createRecurringFailureNotification(context);
+  } catch (notificationError) {
+    console.error('[recurring-worker] recurring failure notification side-effect failed', notificationError);
+  }
+}
+
 async function listRulesReadyForCycle(
   now: Date,
   retryBackoffMs: number,
@@ -310,14 +356,14 @@ async function upsertFailedAttemptState(params: {
   now: Date;
   errorType: RecurringErrorType;
   reason: string;
-}): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+}): Promise<RecurringFailureNotificationContext | null> {
+  return prisma.$transaction(async (tx) => {
     const currentRule = await tx.recurringRule.findUnique({
       where: { id: params.ruleId },
     });
 
     if (!currentRule || currentRule.status !== 'ACTIVE') {
-      return;
+      return null;
     }
 
     const executionKey = {
@@ -369,7 +415,13 @@ async function upsertFailedAttemptState(params: {
         },
       });
 
-      return;
+      return {
+        userId: currentRule.userId,
+        ruleDescription: currentRule.description,
+        errorType: params.errorType,
+        reason: params.reason,
+        shouldNotify: true,
+      };
     }
 
     await tx.recurringRule.update({
@@ -381,6 +433,14 @@ async function upsertFailedAttemptState(params: {
         failureCount: currentRule.failureCount + 1,
       },
     });
+
+    return {
+      userId: currentRule.userId,
+      ruleDescription: currentRule.description,
+      errorType: params.errorType,
+      reason: params.reason,
+      shouldNotify: currentRule.failureCount === 0,
+    };
   });
 }
 
@@ -491,6 +551,8 @@ async function materializeSingleOccurrence(params: {
   now: Date;
 }): Promise<MaterializationOutcome> {
   try {
+    let pendingFailureNotification: RecurringFailureNotificationContext | null = null;
+
     const outcome = await prisma.$transaction(async (tx): Promise<MaterializationOutcome> => {
       const rule = await tx.recurringRule.findUnique({
         where: { id: params.ruleId },
@@ -640,6 +702,14 @@ async function materializeSingleOccurrence(params: {
           },
         });
 
+        pendingFailureNotification = {
+          userId: rule.userId,
+          ruleDescription: rule.description,
+          errorType: RecurringErrorType.STRUCTURAL,
+          reason,
+          shouldNotify: true,
+        };
+
         return {
           kind: 'FAILED_STRUCTURAL',
           countsAsAttempt: true,
@@ -680,6 +750,14 @@ async function materializeSingleOccurrence(params: {
             failureCount: rule.failureCount + 1,
           },
         });
+
+        pendingFailureNotification = {
+          userId: rule.userId,
+          ruleDescription: rule.description,
+          errorType: RecurringErrorType.STRUCTURAL,
+          reason,
+          shouldNotify: true,
+        };
 
         return {
           kind: 'FAILED_STRUCTURAL',
@@ -722,6 +800,14 @@ async function materializeSingleOccurrence(params: {
               failureCount: rule.failureCount + 1,
             },
           });
+
+          pendingFailureNotification = {
+            userId: rule.userId,
+            ruleDescription: rule.description,
+            errorType: RecurringErrorType.STRUCTURAL,
+            reason,
+            shouldNotify: true,
+          };
 
           return {
             kind: 'FAILED_STRUCTURAL',
@@ -808,6 +894,10 @@ async function materializeSingleOccurrence(params: {
       };
     });
 
+    if (pendingFailureNotification) {
+      await sendRecurringFailureNotificationBestEffort(pendingFailureNotification);
+    }
+
     return outcome;
   } catch (error) {
     const classification = classifyMaterializationError(error);
@@ -819,13 +909,17 @@ async function materializeSingleOccurrence(params: {
     const errorType = classification === 'STRUCTURAL' ? RecurringErrorType.STRUCTURAL : RecurringErrorType.TRANSIENT;
     const reason = buildExecutionErrorMessage(error);
 
-    await upsertFailedAttemptState({
+    const failureContext = await upsertFailedAttemptState({
       ruleId: params.ruleId,
       scheduledFor: params.scheduledFor,
       now: params.now,
       errorType,
       reason,
     });
+
+    if (failureContext) {
+      await sendRecurringFailureNotificationBestEffort(failureContext);
+    }
 
     return classification === 'STRUCTURAL'
       ? {
