@@ -53,7 +53,7 @@ export function TransactionsList({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="grid grid-cols-[56px_minmax(0,1fr)_max-content_auto] items-center gap-3 py-3 text-sm"
+                    className="grid grid-cols-[56px_minmax(0,1fr)_max-content] items-center gap-3 py-3 text-sm"
                   >
                     <span className="text-xs text-slate-400 dark:text-slate-500">{item.timeLabel}</span>
 
@@ -73,7 +73,7 @@ export function TransactionsList({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-[max-content_108px_96px] items-center justify-self-end gap-2.5">
+                    <div className="grid grid-cols-[max-content_108px_96px_auto] items-center justify-self-end gap-2.5">
                       {item.badgeLabel ? (
                         <span
                           className="justify-self-end rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
@@ -97,25 +97,25 @@ export function TransactionsList({
                       <span className="whitespace-nowrap text-left text-xs text-slate-500 dark:text-slate-400">
                         {item.accountLabel}
                       </span>
-                    </div>
 
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onEdit?.(item.id)}
-                        aria-label={`Edit ${item.merchantLabel}`}
-                        className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                      >
-                        <EditIcon />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete?.(item.id)}
-                        aria-label={`Delete ${item.merchantLabel}`}
-                        className="rounded p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-300"
-                      >
-                        <TrashIcon />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onEdit?.(item.id)}
+                          aria-label={`Edit ${item.merchantLabel}`}
+                          className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete?.(item.id)}
+                          aria-label={`Delete ${item.merchantLabel}`}
+                          className="rounded p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-300"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
