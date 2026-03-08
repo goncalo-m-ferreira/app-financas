@@ -2,8 +2,18 @@ import type { Response } from 'express';
 import { getAuthUserIdOrThrow } from '../middlewares/auth.js';
 import type { AuthenticatedRequest } from '../types/http.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { createBudgetBodySchema, listBudgetsQuerySchema } from '../validations/budgets.schemas.js';
-import { createBudget, listBudgetsWithMonthlySpending } from '../services/budgets.service.js';
+import {
+  budgetParamSchema,
+  createBudgetBodySchema,
+  listBudgetsQuerySchema,
+  updateBudgetBodySchema,
+} from '../validations/budgets.schemas.js';
+import {
+  createBudget,
+  deleteBudget,
+  listBudgetsWithMonthlySpending,
+  updateBudget,
+} from '../services/budgets.service.js';
 
 export const listMyBudgetsController = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -23,5 +33,24 @@ export const createMyBudgetController = asyncHandler(
     const body = createBudgetBodySchema.parse(req.body);
     const budget = await createBudget(userId, body);
     res.status(201).json(budget);
+  },
+);
+
+export const updateMyBudgetController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = getAuthUserIdOrThrow(req);
+    const { budgetId } = budgetParamSchema.parse(req.params);
+    const body = updateBudgetBodySchema.parse(req.body);
+    const budget = await updateBudget(userId, budgetId, body);
+    res.status(200).json(budget);
+  },
+);
+
+export const deleteMyBudgetController = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = getAuthUserIdOrThrow(req);
+    const { budgetId } = budgetParamSchema.parse(req.params);
+    const budget = await deleteBudget(userId, budgetId);
+    res.status(200).json(budget);
   },
 );

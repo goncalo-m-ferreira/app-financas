@@ -28,13 +28,14 @@ import type {
   LoginInput,
   MonthYearFilter,
   RegisterInput,
-  UpdateCurrentUserInput,
-  UpdateTransactionInput,
-  UpdateWalletInput,
   RecurringExecutionStatus,
   RecurringPreviewResponse,
   RecurringRuleStatus,
+  UpdateCurrentUserInput,
+  UpdateBudgetInput,
   UpdateRecurringRuleInput,
+  UpdateTransactionInput,
+  UpdateWalletInput,
 } from '../types/finance';
 
 type ApiErrorPayload = {
@@ -445,6 +446,25 @@ export async function createBudget(token: string, payload: CreateBudgetInput): P
     method: 'POST',
     token,
     body: payload,
+  });
+}
+
+export async function updateBudget(
+  token: string,
+  budgetId: string,
+  payload: UpdateBudgetInput,
+): Promise<ApiBudget> {
+  return requestJson<ApiBudget>(`/budgets/${budgetId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  });
+}
+
+export async function deleteBudget(token: string, budgetId: string): Promise<ApiBudget> {
+  return requestJson<ApiBudget>(`/budgets/${budgetId}`, {
+    method: 'DELETE',
+    token,
   });
 }
 

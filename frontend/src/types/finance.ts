@@ -173,6 +173,10 @@ export type CreateBudgetInput = {
   categoryId: string;
 };
 
+export type UpdateBudgetInput = {
+  amount: number;
+};
+
 export type CreateExpenseCategoryInput = {
   name: string;
   color?: string;

@@ -8,6 +8,10 @@ export type CreateBudgetInput = {
   amount: number;
 };
 
+export type UpdateBudgetInput = {
+  amount: number;
+};
+
 type BudgetWithCategory = Prisma.BudgetGetPayload<{
   include: {
     category: {
@@ -20,6 +24,17 @@ type BudgetWithCategory = Prisma.BudgetGetPayload<{
     };
   };
 }>;
+
+const BUDGET_CATEGORY_INCLUDE = {
+  category: {
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      icon: true,
+    },
+  },
+} as const;
 
 export type BudgetOverviewItem = Omit<BudgetWithCategory, 'amount'> & {
   amount: string;
@@ -65,6 +80,42 @@ async function ensureCategoryBelongsToUser(userId: string, categoryId: string): 
   }
 }
 
+async function getBudgetOrThrow(userId: string, budgetId: string): Promise<BudgetWithCategory> {
+  const budget = await prisma.budget.findUnique({
+    where: { id: budgetId },
+    include: BUDGET_CATEGORY_INCLUDE,
+  });
+
+  if (!budget || budget.userId !== userId) {
+    throw new AppError('Orçamento não encontrado.', 404);
+  }
+
+  return budget;
+}
+
+async function getCurrentMonthSpentForCategory(
+  userId: string,
+  categoryId: string,
+): Promise<Prisma.Decimal | null> {
+  const { start, endExclusive } = resolveMonthYearRange({});
+  const spending = await prisma.transaction.aggregate({
+    where: {
+      userId,
+      type: 'EXPENSE',
+      categoryId,
+      transactionDate: {
+        gte: start,
+        lt: endExclusive,
+      },
+    },
+    _sum: {
+      amount: true,
+    },
+  });
+
+  return spending._sum.amount ?? null;
+}
+
 function toBudgetOverviewItem(
   budget: BudgetWithCategory,
   spentAmount: Prisma.Decimal | null,
@@ -99,16 +150,7 @@ export async function listBudgetsWithMonthlySpending(
   const { month, year, start, endExclusive } = resolveMonthYearRange(period);
   const budgets = await prisma.budget.findMany({
     where: { userId },
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          color: true,
-          icon: true,
-        },
-      },
-    },
+    include: BUDGET_CATEGORY_INCLUDE,
     orderBy: [{ createdAt: 'desc' }],
   });
 
@@ -171,16 +213,7 @@ export async function createBudget(
         categoryId: input.categoryId,
         amount: input.amount,
       },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-            icon: true,
-          },
-        },
-      },
+      include: BUDGET_CATEGORY_INCLUDE,
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -190,21 +223,60 @@ export async function createBudget(
     throw error;
   }
 
-  const { start, endExclusive } = resolveMonthYearRange({});
-  const spending = await prisma.transaction.aggregate({
-    where: {
-      userId,
-      type: 'EXPENSE',
-      categoryId: createdBudget.categoryId,
-      transactionDate: {
-        gte: start,
-        lt: endExclusive,
-      },
-    },
-    _sum: {
-      amount: true,
-    },
-  });
+  const spentAmount = await getCurrentMonthSpentForCategory(userId, createdBudget.categoryId);
 
-  return toBudgetOverviewItem(createdBudget, spending._sum.amount ?? null);
+  return toBudgetOverviewItem(createdBudget, spentAmount);
+}
+
+export async function updateBudget(
+  userId: string,
+  budgetId: string,
+  input: UpdateBudgetInput,
+): Promise<BudgetOverviewItem> {
+  await ensureUserExists(userId);
+  await getBudgetOrThrow(userId, budgetId);
+
+  let updatedBudget: BudgetWithCategory;
+
+  try {
+    updatedBudget = await prisma.budget.update({
+      where: { id: budgetId },
+      data: {
+        amount: input.amount,
+      },
+      include: BUDGET_CATEGORY_INCLUDE,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new AppError('Orçamento não encontrado.', 404);
+    }
+
+    throw error;
+  }
+
+  const spentAmount = await getCurrentMonthSpentForCategory(userId, updatedBudget.categoryId);
+  return toBudgetOverviewItem(updatedBudget, spentAmount);
+}
+
+export async function deleteBudget(userId: string, budgetId: string): Promise<BudgetOverviewItem> {
+  await ensureUserExists(userId);
+  await getBudgetOrThrow(userId, budgetId);
+
+  let deletedBudget: BudgetWithCategory;
+
+  try {
+    deletedBudget = await prisma.budget.delete({
+      where: { id: budgetId },
+      include: BUDGET_CATEGORY_INCLUDE,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new AppError('Orçamento não encontrado.', 404);
+    }
+
+    throw error;
+  }
+
+  const spentAmount = await getCurrentMonthSpentForCategory(userId, deletedBudget.categoryId);
+  return toBudgetOverviewItem(deletedBudget, spentAmount);
 }
