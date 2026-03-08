@@ -176,6 +176,37 @@ describe('home insights service', () => {
     expect(exceeded?.alertLevel).toBe('CRITICAL');
   });
 
+  test('always returns additive home insight objects in response shape', async () => {
+    const result = await getHomeInsights('user-1', {
+      month: 3,
+      year: 2026,
+    });
+
+    expect(result.monthlySummary).toEqual({
+      incomeThisMonth: '0.00',
+      spentThisMonth: '0.00',
+      netThisMonth: '0.00',
+      transactionCount: 0,
+    });
+
+    expect(result.budgetStatus).toEqual({
+      totalBudgets: 0,
+      warningCount: 0,
+      criticalCount: 0,
+      exceededCount: 0,
+      hasAlerts: false,
+      items: [],
+    });
+
+    expect(result.recurringStatus).toEqual({
+      pausedCount: 0,
+      dueSoonCount: 0,
+      failedRecentCount: 0,
+      needsAttentionCount: 0,
+      hasIssues: false,
+    });
+  });
+
   test('computes recurring status with fixed 30-day failure window and 7-day due-soon window', async () => {
     vi.useFakeTimers();
 

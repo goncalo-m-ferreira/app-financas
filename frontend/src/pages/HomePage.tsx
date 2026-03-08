@@ -58,6 +58,27 @@ const INITIAL_INSIGHTS: HomeInsightsResponse = {
 };
 
 const SUCCESS_TOAST_TTL_MS = 2600;
+const FALLBACK_MONTHLY_SUMMARY: HomeInsightsResponse['monthlySummary'] = {
+  incomeThisMonth: '0.00',
+  spentThisMonth: '0.00',
+  netThisMonth: '0.00',
+  transactionCount: 0,
+};
+const FALLBACK_BUDGET_STATUS: HomeInsightsResponse['budgetStatus'] = {
+  totalBudgets: 0,
+  warningCount: 0,
+  criticalCount: 0,
+  exceededCount: 0,
+  hasAlerts: false,
+  items: [],
+};
+const FALLBACK_RECURRING_STATUS: HomeInsightsResponse['recurringStatus'] = {
+  pausedCount: 0,
+  dueSoonCount: 0,
+  failedRecentCount: 0,
+  needsAttentionCount: 0,
+  hasIssues: false,
+};
 
 type PendingDeleteTransaction = {
   id: string;
@@ -230,6 +251,45 @@ export function HomePage(): JSX.Element {
       }, 0),
     [wallets],
   );
+
+  const monthlySummary = insights.monthlySummary ?? FALLBACK_MONTHLY_SUMMARY;
+
+  const budgetStatus = useMemo(() => {
+    const source = insights.budgetStatus;
+    const warningCount = source?.warningCount ?? 0;
+    const criticalCount = source?.criticalCount ?? 0;
+    const exceededCount = source?.exceededCount ?? criticalCount;
+    const hasAlerts = source?.hasAlerts ?? (warningCount > 0 || criticalCount > 0);
+
+    return {
+      ...FALLBACK_BUDGET_STATUS,
+      ...source,
+      warningCount,
+      criticalCount,
+      exceededCount,
+      hasAlerts,
+      items: source?.items ?? [],
+    };
+  }, [insights.budgetStatus]);
+
+  const recurringStatus = useMemo(() => {
+    const source = insights.recurringStatus;
+    const pausedCount = source?.pausedCount ?? 0;
+    const failedRecentCount = source?.failedRecentCount ?? 0;
+    const dueSoonCount = source?.dueSoonCount ?? 0;
+    const needsAttentionCount = source?.needsAttentionCount ?? pausedCount + failedRecentCount;
+    const hasIssues = source?.hasIssues ?? needsAttentionCount > 0;
+
+    return {
+      ...FALLBACK_RECURRING_STATUS,
+      ...source,
+      pausedCount,
+      failedRecentCount,
+      dueSoonCount,
+      needsAttentionCount,
+      hasIssues,
+    };
+  }, [insights.recurringStatus]);
 
   async function refreshCommandCenter(): Promise<void> {
     if (!token) {
@@ -408,7 +468,7 @@ export function HomePage(): JSX.Element {
                   Spent This Month
                 </p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {formatCurrency(parseAmount(insights.monthlySummary.spentThisMonth), currency)}
+                  {formatCurrency(parseAmount(monthlySummary.spentThisMonth), currency)}
                 </p>
               </article>
 
@@ -424,7 +484,7 @@ export function HomePage(): JSX.Element {
               <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Budget Alerts</p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {insights.budgetStatus.warningCount} warning, {insights.budgetStatus.exceededCount} exceeded
+                  {budgetStatus.warningCount} warning, {budgetStatus.exceededCount} exceeded
                 </p>
               </article>
 
@@ -433,7 +493,7 @@ export function HomePage(): JSX.Element {
                   Recurring Attention
                 </p>
                 <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {insights.recurringStatus.needsAttentionCount} issues, {insights.recurringStatus.dueSoonCount} due soon
+                  {recurringStatus.needsAttentionCount} issues, {recurringStatus.dueSoonCount} due soon
                 </p>
               </article>
             </section>
@@ -577,7 +637,7 @@ export function HomePage(): JSX.Element {
                 <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-950">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Budgets</p>
                   <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                    {insights.budgetStatus.warningCount} near limit and {insights.budgetStatus.exceededCount} exceeded in {monthLabel}.
+                    {budgetStatus.warningCount} near limit and {budgetStatus.exceededCount} exceeded in {monthLabel}.
                   </p>
                   <Link
                     to="/budgets"
@@ -590,7 +650,7 @@ export function HomePage(): JSX.Element {
                 <section className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-950">
                   <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring rules</p>
                   <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
-                    {insights.recurringStatus.pausedCount} paused, {insights.recurringStatus.failedRecentCount} failures in last 30 days, {insights.recurringStatus.dueSoonCount} due in 7 days.
+                    {recurringStatus.pausedCount} paused, {recurringStatus.failedRecentCount} failures in last 30 days, {recurringStatus.dueSoonCount} due in 7 days.
                   </p>
                   <Link
                     to="/recurring-rules"

@@ -354,4 +354,37 @@ describe('HomePage smoke', () => {
 
     expect(screen.getByRole('heading', { name: 'Recent Transactions' })).toBeTruthy();
   });
+
+  it('renders safely when additive insights fields are missing from backend payload', async () => {
+    const legacyInsightsPayload = {
+      period: {
+        month: 3,
+        year: 2026,
+        start: '2026-03-01T00:00:00.000Z',
+        endExclusive: '2026-04-01T00:00:00.000Z',
+      },
+      recentTransactions: [buildTransaction({ id: 'tx-legacy', description: 'Legacy transaction' })],
+      budgetStatus: {
+        totalBudgets: 1,
+        warningCount: 0,
+        criticalCount: 0,
+        hasAlerts: false,
+        items: [],
+      },
+    } as unknown as HomeInsightsResponse;
+
+    fetchHomeInsightsMock.mockResolvedValueOnce(legacyInsightsPayload);
+
+    renderHomePage();
+
+    await waitFor(() => {
+      expect(fetchHomeInsightsMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByRole('heading', { name: 'Recent Transactions' })).toBeTruthy();
+    expect(screen.getByText('0 warning, 0 exceeded')).toBeTruthy();
+    expect(
+      screen.getByText('0 paused, 0 failures in last 30 days, 0 due in 7 days.'),
+    ).toBeTruthy();
+  });
 });
