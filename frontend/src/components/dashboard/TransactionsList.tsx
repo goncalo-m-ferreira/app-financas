@@ -73,7 +73,7 @@ export function TransactionsList({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-[96px_108px_96px] items-center gap-2.5">
+                    <div className="grid grid-cols-[max-content_108px_96px] items-center justify-self-end gap-2.5">
                       {item.badgeLabel ? (
                         <span
                           className="justify-self-end rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-100"
