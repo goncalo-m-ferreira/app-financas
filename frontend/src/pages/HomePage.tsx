@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
 import { DeleteConfirmModal } from '../components/dashboard/DeleteConfirmModal';
 import { EditTransactionModal } from '../components/dashboard/EditTransactionModal';
@@ -33,14 +34,30 @@ const INITIAL_INSIGHTS: HomeInsightsResponse = {
     endExclusive: '',
   },
   recentTransactions: [],
+  monthlySummary: {
+    incomeThisMonth: '0.00',
+    spentThisMonth: '0.00',
+    netThisMonth: '0.00',
+    transactionCount: 0,
+  },
   budgetStatus: {
     totalBudgets: 0,
     warningCount: 0,
     criticalCount: 0,
+    exceededCount: 0,
     hasAlerts: false,
     items: [],
   },
+  recurringStatus: {
+    pausedCount: 0,
+    dueSoonCount: 0,
+    failedRecentCount: 0,
+    needsAttentionCount: 0,
+    hasIssues: false,
+  },
 };
+
+const SUCCESS_TOAST_TTL_MS = 2600;
 
 type PendingDeleteTransaction = {
   id: string;
@@ -84,26 +101,25 @@ function transactionSignedAmount(type: 'INCOME' | 'EXPENSE', amount: string): nu
   return type === 'EXPENSE' ? -Math.abs(numericAmount) : Math.abs(numericAmount);
 }
 
-function resolveAlertLevel(usageRatio: number): 'SAFE' | 'WARNING' | 'CRITICAL' {
-  if (usageRatio >= 0.9) {
-    return 'CRITICAL';
-  }
-
-  if (usageRatio >= 0.8) {
-    return 'WARNING';
-  }
-
-  return 'SAFE';
+function parseAmount(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function HomePage(): JSX.Element {
   const { token, user } = useAuth();
   const { month, year } = useDateFilter();
+
   const [insights, setInsights] = useState<HomeInsightsResponse>(INITIAL_INSIGHTS);
   const [wallets, setWallets] = useState<ApiWallet[]>([]);
   const [categories, setCategories] = useState<ApiExpenseCategory[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTransaction, setEditingTransaction] = useState<ApiTransaction | null>(null);
@@ -123,7 +139,7 @@ export function HomePage(): JSX.Element {
     async function loadHomeData(): Promise<void> {
       try {
         setLoading(true);
-        setErrorMessage(null);
+        setLoadErrorMessage(null);
 
         const [insightsData, walletsData, categoriesData] = await Promise.all([
           fetchHomeInsights(
@@ -151,16 +167,16 @@ export function HomePage(): JSX.Element {
         }
 
         if (error instanceof ApiClientError) {
-          setErrorMessage(error.message);
+          setLoadErrorMessage(error.message);
           return;
         }
 
         if (error instanceof Error) {
-          setErrorMessage(error.message);
+          setLoadErrorMessage(error.message);
           return;
         }
 
-        setErrorMessage('Unexpected error while loading command center.');
+        setLoadErrorMessage('Unexpected error while loading command center.');
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -168,7 +184,7 @@ export function HomePage(): JSX.Element {
       }
     }
 
-    loadHomeData();
+    void loadHomeData();
 
     return () => {
       isMounted = false;
@@ -176,134 +192,69 @@ export function HomePage(): JSX.Element {
     };
   }, [month, reloadKey, token, year]);
 
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, SUCCESS_TOAST_TTL_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [successMessage]);
+
   const currency = user?.defaultCurrency ?? 'EUR';
+
+  const monthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-GB', {
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date(year, month - 1, 1)),
+    [month, year],
+  );
 
   const sortedWallets = useMemo(
     () => [...wallets].sort((left, right) => left.name.localeCompare(right.name)),
     [wallets],
   );
 
-  const alertItems = useMemo(
+  const walletTotal = useMemo(
     () =>
-      [...insights.budgetStatus.items]
-        .filter((item) => item.alertLevel !== 'SAFE')
-        .sort((left, right) => right.usageRatio - left.usageRatio),
-    [insights.budgetStatus.items],
+      wallets.reduce((accumulator, wallet) => {
+        const numericBalance = Number.parseFloat(wallet.balance);
+        return accumulator + (Number.isFinite(numericBalance) ? numericBalance : 0);
+      }, 0),
+    [wallets],
   );
 
-  async function handleCreateTransaction(payload: CreateTransactionInput): Promise<void> {
+  async function refreshCommandCenter(): Promise<void> {
     if (!token) {
-      throw new Error('Session expired. Please sign in again.');
+      return;
     }
 
-    const createdTransaction = await createTransaction(token, payload);
+    try {
+      setIsRefreshing(true);
 
-    setWallets((current) =>
-      current.map((wallet) => {
-        if (wallet.id !== createdTransaction.walletId) {
-          return wallet;
-        }
+      const [nextInsights, nextWallets] = await Promise.all([
+        fetchHomeInsights(token, { month, year }),
+        fetchWallets(token),
+      ]);
 
-        const currentBalance = Number.parseFloat(wallet.balance);
-        const signedAmount = transactionSignedAmount(createdTransaction.type, createdTransaction.amount);
-
-        return {
-          ...wallet,
-          balance: (Number.isFinite(currentBalance) ? currentBalance + signedAmount : signedAmount).toFixed(2),
-        };
-      }),
-    );
-
-    setInsights((current) => {
-      const recentTransactions = [createdTransaction, ...current.recentTransactions].slice(0, 5);
-      const nextBudgetItems: HomeInsightsResponse['budgetStatus']['items'] = current.budgetStatus.items.map(
-        (budgetItem) => {
-          if (
-            createdTransaction.type !== 'EXPENSE' ||
-            !createdTransaction.categoryId ||
-            createdTransaction.categoryId !== budgetItem.categoryId
-          ) {
-            return budgetItem;
-          }
-
-          const spent = Number.parseFloat(budgetItem.spentThisMonth);
-          const limit = Number.parseFloat(budgetItem.limit);
-          const transactionAmount = Number.parseFloat(createdTransaction.amount);
-
-          if (!Number.isFinite(spent) || !Number.isFinite(limit) || !Number.isFinite(transactionAmount)) {
-            return budgetItem;
-          }
-
-          const nextSpent = spent + transactionAmount;
-          const usageRatio = limit > 0 ? nextSpent / limit : 0;
-          const remaining = limit - nextSpent;
-
-          return {
-            ...budgetItem,
-            spentThisMonth: nextSpent.toFixed(2),
-            remaining: remaining.toFixed(2),
-            usageRatio,
-            alertLevel: resolveAlertLevel(usageRatio),
-          };
-        },
-      );
-
-      const warningCount = nextBudgetItems.filter((item) => item.alertLevel === 'WARNING').length;
-      const criticalCount = nextBudgetItems.filter((item) => item.alertLevel === 'CRITICAL').length;
-
-      return {
-        ...current,
-        recentTransactions,
-        budgetStatus: {
-          ...current.budgetStatus,
-          warningCount,
-          criticalCount,
-          hasAlerts: warningCount > 0 || criticalCount > 0,
-          items: nextBudgetItems,
-        },
-      };
-    });
-  }
-
-  async function handleUpdateTransaction(
-    transactionId: string,
-    payload: UpdateTransactionInput,
-  ): Promise<void> {
-    if (!token) {
-      throw new Error('Session expired. Please sign in again.');
+      setInsights(nextInsights);
+      setWallets(nextWallets);
+    } catch (error) {
+      if (error instanceof Error) {
+        setActionErrorMessage(error.message);
+      } else {
+        setActionErrorMessage('Failed to refresh command center data.');
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-
-    const updatedTransaction = await updateTransaction(token, transactionId, payload);
-
-    setInsights((current) => ({
-      ...current,
-      recentTransactions: current.recentTransactions
-        .map((transaction) => (transaction.id === transactionId ? updatedTransaction : transaction))
-        .sort(
-          (left, right) =>
-            new Date(right.transactionDate).getTime() - new Date(left.transactionDate).getTime(),
-        )
-        .slice(0, 5),
-    }));
-
-    setReloadKey((value) => value + 1);
-  }
-
-  async function handleDeleteRecentTransaction(transactionId: string): Promise<void> {
-    if (!token) {
-      throw new Error('Session expired. Please sign in again.');
-    }
-
-    await deleteTransaction(token, transactionId);
-
-    setInsights((current) => ({
-      ...current,
-      recentTransactions: current.recentTransactions.filter(
-        (transaction) => transaction.id !== transactionId,
-      ),
-    }));
-
-    setReloadKey((value) => value + 1);
   }
 
   function getTransactionDescription(transaction: ApiTransaction): string {
@@ -320,6 +271,49 @@ export function HomePage(): JSX.Element {
     return transaction.type === 'EXPENSE' ? 'Expense' : 'Income';
   }
 
+  function showSuccess(message: string): void {
+    setSuccessMessage(message);
+  }
+
+  async function handleCreateTransaction(payload: CreateTransactionInput): Promise<void> {
+    if (!token) {
+      throw new Error('Session expired. Please sign in again.');
+    }
+
+    setActionErrorMessage(null);
+
+    try {
+      await createTransaction(token, payload);
+      showSuccess('Transaction created successfully.');
+      await refreshCommandCenter();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create transaction.';
+      setActionErrorMessage(message);
+      throw error instanceof Error ? error : new Error(message);
+    }
+  }
+
+  async function handleUpdateTransaction(
+    transactionId: string,
+    payload: UpdateTransactionInput,
+  ): Promise<void> {
+    if (!token) {
+      throw new Error('Session expired. Please sign in again.');
+    }
+
+    setActionErrorMessage(null);
+
+    try {
+      await updateTransaction(token, transactionId, payload);
+      showSuccess('Transaction updated successfully.');
+      await refreshCommandCenter();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update transaction.';
+      setActionErrorMessage(message);
+      throw error instanceof Error ? error : new Error(message);
+    }
+  }
+
   function handleRequestDeleteRecentTransaction(transaction: ApiTransaction): void {
     setPendingDeleteTransaction({
       id: transaction.id,
@@ -327,11 +321,22 @@ export function HomePage(): JSX.Element {
     });
   }
 
+  async function handleDeleteRecentTransaction(transactionId: string): Promise<void> {
+    if (!token) {
+      throw new Error('Session expired. Please sign in again.');
+    }
+
+    await deleteTransaction(token, transactionId);
+    showSuccess('Transaction deleted successfully.');
+    await refreshCommandCenter();
+  }
+
   async function handleConfirmDeleteRecentTransaction(): Promise<void> {
     if (!pendingDeleteTransaction) {
       return;
     }
 
+    setActionErrorMessage(null);
     setIsDeletingTransaction(true);
 
     try {
@@ -339,9 +344,9 @@ export function HomePage(): JSX.Element {
       setPendingDeleteTransaction(null);
     } catch (error) {
       if (error instanceof Error) {
-        setErrorMessage(error.message);
+        setActionErrorMessage(error.message);
       } else {
-        setErrorMessage('Failed to delete transaction.');
+        setActionErrorMessage('Failed to delete transaction.');
       }
     } finally {
       setIsDeletingTransaction(false);
@@ -354,14 +359,15 @@ export function HomePage(): JSX.Element {
         <PremiumPageHeader
           eyebrow="Command Center"
           title={`Welcome back, ${user?.name ?? 'User'}`}
-          description="Quick view of wallets, recent activity and budget alerts."
+          description="Quick view of wallets, monthly activity, budget alerts and recurring operations."
           actions={
             <>
               <MonthYearSelector variant="dashboardTopbar" />
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
+                disabled={loading || isRefreshing}
+                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 Add Transaction
               </button>
@@ -369,212 +375,234 @@ export function HomePage(): JSX.Element {
           }
         />
 
-              {loading ? (
-                <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                  Loading command center data...
-                </div>
-              ) : null}
+        {loading ? (
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            Loading command center data...
+          </div>
+        ) : null}
 
-              {errorMessage ? (
-                <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
-                  <p>{errorMessage}</p>
-                  <button
-                    type="button"
-                    onClick={() => setReloadKey((value) => value + 1)}
-                    className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+        {loadErrorMessage ? (
+          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <p>{loadErrorMessage}</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((value) => value + 1)}
+              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+            >
+              Retry
+            </button>
+          </section>
+        ) : null}
+
+        {actionErrorMessage ? (
+          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+            <p>{actionErrorMessage}</p>
+          </section>
+        ) : null}
+
+        {!loading && !loadErrorMessage ? (
+          <>
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Monthly summary">
+              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Spent This Month
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(parseAmount(insights.monthlySummary.spentThisMonth), currency)}
+                </p>
+              </article>
+
+              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Wallet Total (All Wallets)
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {formatCurrency(walletTotal, currency)}
+                </p>
+              </article>
+
+              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Budget Alerts</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {insights.budgetStatus.warningCount} warning, {insights.budgetStatus.exceededCount} exceeded
+                </p>
+              </article>
+
+              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Recurring Attention
+                </p>
+                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {insights.recurringStatus.needsAttentionCount} issues, {insights.recurringStatus.dueSoonCount} due soon
+                </p>
+              </article>
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Wallet cards">
+              {sortedWallets.length === 0 ? (
+                <article className="col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">No wallets yet</h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Create wallets in Accounts & Cards to start adding transactions.
+                  </p>
+                </article>
+              ) : (
+                sortedWallets.map((wallet) => {
+                  const walletColor = parseHexColor(wallet.color);
+                  const balance = Number.parseFloat(wallet.balance);
+
+                  return (
+                    <article
+                      key={wallet.id}
+                      className="rounded-2xl border border-white/30 p-5 text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)]"
+                      style={{
+                        backgroundImage: `linear-gradient(140deg, ${hexToRgba(walletColor, 0.92)} 0%, ${hexToRgba(walletColor, 0.64)} 55%, ${hexToRgba('#0f172a', 0.9)} 120%)`,
+                      }}
+                    >
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/75">Wallet</p>
+                      <h2 className="mt-3 text-xl font-semibold">{wallet.name}</h2>
+                      <p className="mt-6 text-2xl font-semibold">
+                        {formatCurrency(Number.isFinite(balance) ? balance : 0, currency)}
+                      </p>
+                    </article>
+                  );
+                })
+              )}
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[1.8fr_1fr]">
+              <article className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <header className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Recent Transactions
+                  </h2>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Showing recent transactions in {monthLabel}.
+                  </p>
+                </header>
+
+                {isRefreshing ? (
+                  <p className="border-b border-slate-100 px-5 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                    Refreshing command center data...
+                  </p>
+                ) : null}
+
+                {insights.recentTransactions.length === 0 ? (
+                  <p className="px-5 py-8 text-sm text-slate-500 dark:text-slate-400">
+                    No transactions found for {monthLabel}.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
+                      <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                        <tr>
+                          <th className="px-5 py-3">Date</th>
+                          <th className="px-5 py-3">Description</th>
+                          <th className="px-5 py-3">Wallet</th>
+                          <th className="px-5 py-3 text-right">Amount</th>
+                          <th className="px-5 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {insights.recentTransactions.map((transaction) => {
+                          const signedAmount = transactionSignedAmount(transaction.type, transaction.amount);
+                          const description = getTransactionDescription(transaction);
+
+                          return (
+                            <tr key={transaction.id} className="bg-white dark:bg-slate-900">
+                              <td className="whitespace-nowrap px-5 py-3 text-slate-500 dark:text-slate-400">
+                                {new Intl.DateTimeFormat('en-GB', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }).format(new Date(transaction.transactionDate))}
+                              </td>
+                              <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
+                                {description}
+                              </td>
+                              <td className="px-5 py-3 text-slate-500 dark:text-slate-400">
+                                {transaction.wallet?.name ?? 'Unassigned'}
+                              </td>
+                              <td
+                                className={[
+                                  'whitespace-nowrap px-5 py-3 text-right font-semibold',
+                                  signedAmount < 0
+                                    ? 'text-slate-700 dark:text-slate-200'
+                                    : 'text-emerald-600 dark:text-emerald-400',
+                                ].join(' ')}
+                              >
+                                {signedAmount < 0 ? '-' : '+'}
+                                {formatCurrency(Math.abs(signedAmount), currency)}
+                              </td>
+                              <td className="whitespace-nowrap px-5 py-3 text-right">
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingTransaction(transaction)}
+                                    aria-label={`Edit ${description}`}
+                                    className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                                  >
+                                    <EditIcon />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRequestDeleteRecentTransaction(transaction)}
+                                    aria-label={`Delete ${description}`}
+                                    className="rounded p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-300"
+                                  >
+                                    <TrashIcon />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+
+              <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <header>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Insights / Alerts
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Actionable monthly status with quick links.
+                  </p>
+                </header>
+
+                <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-950">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Budgets</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                    {insights.budgetStatus.warningCount} near limit and {insights.budgetStatus.exceededCount} exceeded in {monthLabel}.
+                  </p>
+                  <Link
+                    to="/budgets"
+                    className="mt-2 inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    Retry
-                  </button>
+                    Go to Budgets
+                  </Link>
                 </section>
-              ) : null}
 
-              {!loading && !errorMessage ? (
-                <>
-                  <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Wallet cards">
-                    {sortedWallets.length === 0 ? (
-                      <article className="col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
-                        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                          No wallets yet
-                        </h2>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                          Create wallets in Accounts & Cards to start adding transactions.
-                        </p>
-                      </article>
-                    ) : (
-                      sortedWallets.map((wallet) => {
-                        const walletColor = parseHexColor(wallet.color);
-                        const balance = Number.parseFloat(wallet.balance);
-
-                        return (
-                          <article
-                            key={wallet.id}
-                            className="rounded-2xl border border-white/30 p-5 text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)]"
-                            style={{
-                              backgroundImage: `linear-gradient(140deg, ${hexToRgba(walletColor, 0.92)} 0%, ${hexToRgba(walletColor, 0.64)} 55%, ${hexToRgba('#0f172a', 0.9)} 120%)`,
-                            }}
-                          >
-                            <p className="text-xs uppercase tracking-[0.2em] text-white/75">Wallet</p>
-                            <h2 className="mt-3 text-xl font-semibold">{wallet.name}</h2>
-                            <p className="mt-6 text-2xl font-semibold">
-                              {formatCurrency(Number.isFinite(balance) ? balance : 0, currency)}
-                            </p>
-                          </article>
-                        );
-                      })
-                    )}
-                  </section>
-
-                  <section className="grid gap-4 xl:grid-cols-[1.8fr_1fr]">
-                    <article className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                      <header className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-                        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                          Recent Transactions
-                        </h2>
-                      </header>
-
-                      {insights.recentTransactions.length === 0 ? (
-                        <p className="px-5 py-8 text-sm text-slate-500 dark:text-slate-400">
-                          No recent transactions.
-                        </p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
-                            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-                              <tr>
-                                <th className="px-5 py-3">Date</th>
-                                <th className="px-5 py-3">Description</th>
-                                <th className="px-5 py-3">Wallet</th>
-                                <th className="px-5 py-3 text-right">Amount</th>
-                                <th className="px-5 py-3 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                              {insights.recentTransactions.map((transaction) => {
-                                const signedAmount = transactionSignedAmount(
-                                  transaction.type,
-                                  transaction.amount,
-                                );
-                                const description = getTransactionDescription(transaction);
-
-                                return (
-                                  <tr key={transaction.id} className="bg-white dark:bg-slate-900">
-                                    <td className="whitespace-nowrap px-5 py-3 text-slate-500 dark:text-slate-400">
-                                      {new Intl.DateTimeFormat('en-GB', {
-                                        day: '2-digit',
-                                        month: 'short',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      }).format(new Date(transaction.transactionDate))}
-                                    </td>
-                                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-100">
-                                      {description}
-                                    </td>
-                                    <td className="px-5 py-3 text-slate-500 dark:text-slate-400">
-                                      {transaction.wallet?.name ?? 'Unassigned'}
-                                    </td>
-                                    <td
-                                      className={[
-                                        'whitespace-nowrap px-5 py-3 text-right font-semibold',
-                                        signedAmount < 0
-                                          ? 'text-slate-700 dark:text-slate-200'
-                                          : 'text-emerald-600 dark:text-emerald-400',
-                                      ].join(' ')}
-                                    >
-                                      {signedAmount < 0 ? '-' : '+'}
-                                      {formatCurrency(Math.abs(signedAmount), currency)}
-                                    </td>
-                                    <td className="whitespace-nowrap px-5 py-3 text-right">
-                                      <div className="inline-flex items-center gap-1">
-                                        <button
-                                          type="button"
-                                          onClick={() => setEditingTransaction(transaction)}
-                                          aria-label={`Edit ${description}`}
-                                          className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                                        >
-                                          <EditIcon />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRequestDeleteRecentTransaction(transaction)}
-                                          aria-label={`Delete ${description}`}
-                                          className="rounded p-1 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:hover:bg-rose-900/20 dark:hover:text-rose-300"
-                                        >
-                                          <TrashIcon />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </article>
-
-                    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                      <header>
-                        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                          Insights / Alerts
-                        </h2>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                          Budgets above 80% usage are highlighted.
-                        </p>
-                      </header>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3">
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/50 dark:bg-amber-900/15">
-                          <p className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-300">Warning</p>
-                          <p className="mt-1 text-lg font-semibold text-amber-800 dark:text-amber-200">
-                            {insights.budgetStatus.warningCount}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-900/50 dark:bg-rose-900/15">
-                          <p className="text-xs uppercase tracking-wide text-rose-700 dark:text-rose-300">Critical</p>
-                          <p className="mt-1 text-lg font-semibold text-rose-800 dark:text-rose-200">
-                            {insights.budgetStatus.criticalCount}
-                          </p>
-                        </div>
-                      </div>
-
-                      <ul className="mt-4 space-y-2">
-                        {alertItems.length === 0 ? (
-                          <li className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
-                            No budget alerts for the selected month.
-                          </li>
-                        ) : (
-                          alertItems.map((item) => (
-                            <li
-                              key={item.budgetId}
-                              className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-950"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                                  {item.categoryName}
-                                </p>
-                                <span
-                                  className={[
-                                    'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
-                                    item.alertLevel === 'CRITICAL'
-                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-                                  ].join(' ')}
-                                >
-                                  {item.alertLevel}
-                                </span>
-                              </div>
-                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {Math.round(item.usageRatio * 100)}% used ({formatCurrency(Number.parseFloat(item.spentThisMonth), currency)} of{' '}
-                                {formatCurrency(Number.parseFloat(item.limit), currency)})
-                              </p>
-                            </li>
-                          ))
-                        )}
-                      </ul>
-                    </article>
-                  </section>
-                </>
-              ) : null}
+                <section className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-950">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Recurring rules</p>
+                  <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                    {insights.recurringStatus.pausedCount} paused, {insights.recurringStatus.failedRecentCount} failures in last 30 days, {insights.recurringStatus.dueSoonCount} due in 7 days.
+                  </p>
+                  <Link
+                    to="/recurring-rules"
+                    className="mt-2 inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                  >
+                    Go to Recurring Rules
+                  </Link>
+                </section>
+              </article>
+            </section>
+          </>
+        ) : null}
       </AppShell>
 
       <NewTransactionModal
@@ -607,6 +635,16 @@ export function HomePage(): JSX.Element {
           void handleConfirmDeleteRecentTransaction();
         }}
       />
+
+      {successMessage ? (
+        <div
+          className="fixed right-4 top-4 z-[60] rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 shadow-lg dark:border-emerald-900/60 dark:bg-emerald-950/80 dark:text-emerald-300"
+          role="status"
+          aria-live="polite"
+        >
+          {successMessage}
+        </div>
+      ) : null}
     </>
   );
 }

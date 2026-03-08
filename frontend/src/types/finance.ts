@@ -224,12 +224,26 @@ export type HomeInsightsResponse = {
     endExclusive: string;
   };
   recentTransactions: ApiTransaction[];
+  monthlySummary: {
+    incomeThisMonth: string;
+    spentThisMonth: string;
+    netThisMonth: string;
+    transactionCount: number;
+  };
   budgetStatus: {
     totalBudgets: number;
     warningCount: number;
     criticalCount: number;
+    exceededCount: number;
     hasAlerts: boolean;
     items: HomeBudgetInsight[];
+  };
+  recurringStatus: {
+    pausedCount: number;
+    dueSoonCount: number;
+    failedRecentCount: number;
+    needsAttentionCount: number;
+    hasIssues: boolean;
   };
 };
 

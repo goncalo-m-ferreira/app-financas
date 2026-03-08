@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import type { ApiExpenseCategory, ApiWallet, CreateTransactionInput } from '../../types/finance';
 
 type NewTransactionModalProps = {
@@ -30,24 +30,85 @@ export function NewTransactionModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
+  const wasOpenRef = useRef<boolean>(false);
+
   const expenseCategories = useMemo(
     () => categories.filter((category) => category.name.trim().length > 0),
     [categories],
   );
 
   useEffect(() => {
-    if (!open || walletId || wallets.length === 0) {
+    if (!open) {
+      wasOpenRef.current = false;
+      setErrorMessage(null);
+      setIsSubmitting(false);
       return;
     }
 
-    setWalletId(wallets[0].id);
-  }, [open, walletId, wallets]);
+    if (wasOpenRef.current) {
+      return;
+    }
+
+    wasOpenRef.current = true;
+
+    setType('EXPENSE');
+    setAmount('');
+    setDescription('');
+    setTransactionDate(getDefaultDateTimeLocal());
+    setCategoryId('');
+    setWalletId(wallets[0]?.id ?? '');
+    setErrorMessage(null);
+    setIsSubmitting(false);
+
+    const focusId = window.requestAnimationFrame(() => {
+      amountInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(focusId);
+    };
+  }, [open, wallets]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent): void {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      if (isSubmitting) {
+        event.preventDefault();
+        return;
+      }
+
+      event.preventDefault();
+      onClose();
+    }
+
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isSubmitting, onClose, open]);
 
   if (!open) {
     return null;
   }
 
   const hasWallets = wallets.length > 0;
+  const inputsDisabled = !hasWallets || isSubmitting;
+
+  function handleRequestClose(): void {
+    if (isSubmitting) {
+      return;
+    }
+
+    onClose();
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -89,11 +150,7 @@ export function NewTransactionModal({
         walletId,
       });
 
-      setAmount('');
-      setDescription('');
-      setTransactionDate(getDefaultDateTimeLocal());
-      setCategoryId('');
-      onClose();
+      handleRequestClose();
     } catch (error) {
       if (error instanceof Error) {
         setErrorMessage(error.message);
@@ -119,8 +176,9 @@ export function NewTransactionModal({
           </h2>
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            onClick={handleRequestClose}
+            disabled={isSubmitting}
+            className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             Close
           </button>
@@ -132,7 +190,8 @@ export function NewTransactionModal({
             <select
               value={type}
               onChange={(event) => setType(event.target.value as 'INCOME' | 'EXPENSE')}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              disabled={inputsDisabled}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="EXPENSE">Expense</option>
               <option value="INCOME">Income</option>
@@ -145,7 +204,7 @@ export function NewTransactionModal({
               value={walletId}
               onChange={(event) => setWalletId(event.target.value)}
               required
-              disabled={!hasWallets}
+              disabled={inputsDisabled}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             >
               <option value="">Select wallet</option>
@@ -160,13 +219,14 @@ export function NewTransactionModal({
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</span>
             <input
+              ref={amountInputRef}
               type="number"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               min="0"
               step="0.01"
               required
-              disabled={!hasWallets}
+              disabled={inputsDisabled}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </label>
@@ -177,7 +237,7 @@ export function NewTransactionModal({
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               maxLength={255}
-              disabled={!hasWallets}
+              disabled={inputsDisabled}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </label>
@@ -189,7 +249,7 @@ export function NewTransactionModal({
               value={transactionDate}
               onChange={(event) => setTransactionDate(event.target.value)}
               required
-              disabled={!hasWallets}
+              disabled={inputsDisabled}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             />
           </label>
@@ -201,7 +261,7 @@ export function NewTransactionModal({
                 value={categoryId}
                 onChange={(event) => setCategoryId(event.target.value)}
                 required
-                disabled={!hasWallets}
+                disabled={inputsDisabled}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               >
                 <option value="">Select category</option>
@@ -229,14 +289,15 @@ export function NewTransactionModal({
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={onClose}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              onClick={handleRequestClose}
+              disabled={isSubmitting}
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !hasWallets}
+              disabled={inputsDisabled}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? 'Saving...' : 'Create transaction'}
