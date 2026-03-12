@@ -3,28 +3,37 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import type { AuthenticatedRequest } from '../types/http.js';
+import { readAuthTokenCookie } from '../utils/http-cookies.js';
 
 type TokenPayload = {
   sub?: string;
   email?: string;
 };
 
-function extractBearerToken(headerValue: string | undefined): string {
-  if (!headerValue) {
+function extractAuthToken(req: AuthenticatedRequest): string {
+  const headerValue = req.header('authorization');
+
+  if (headerValue) {
+    const [scheme, token] = headerValue.split(' ');
+
+    if (scheme !== 'Bearer' || !token) {
+      throw new AppError('Formato de Authorization inválido. Use: Bearer <token>.', 401);
+    }
+
+    return token;
+  }
+
+  const cookieToken = readAuthTokenCookie(req);
+
+  if (!cookieToken) {
     throw new AppError('Token de autenticação em falta.', 401);
   }
 
-  const [scheme, token] = headerValue.split(' ');
-
-  if (scheme !== 'Bearer' || !token) {
-    throw new AppError('Formato de Authorization inválido. Use: Bearer <token>.', 401);
-  }
-
-  return token;
+  return cookieToken;
 }
 
 export function requireAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
-  const token = extractBearerToken(req.header('authorization'));
+  const token = extractAuthToken(req);
 
   try {
     const decodedToken = jwt.verify(token, env.jwtSecret) as TokenPayload;

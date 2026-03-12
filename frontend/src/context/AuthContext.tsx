@@ -8,13 +8,11 @@ import {
   type PropsWithChildren,
 } from 'react';
 import {
-  clearAuthToken,
   fetchCurrentUser,
-  getStoredAuthToken,
   loginWithGoogle,
   loginUser,
+  logoutSession,
   registerUser,
-  saveAuthToken,
 } from '../services/api';
 import type { ApiUser, AuthPayload, LoginInput, RegisterInput } from '../types/finance';
 
@@ -32,6 +30,7 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const COOKIE_SESSION_MARKER = 'cookie-session';
 
 export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
   const [token, setToken] = useState<string | null>(null);
@@ -43,26 +42,22 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     let isMounted = true;
 
     async function initializeAuth(): Promise<void> {
-      const storedToken = getStoredAuthToken();
-
-      if (!storedToken) {
-        if (isMounted) {
-          setIsInitializing(false);
-        }
-        return;
-      }
-
       try {
-        const me = await fetchCurrentUser(storedToken, controller.signal);
+        const me = await fetchCurrentUser(undefined, controller.signal);
 
         if (!isMounted) {
           return;
         }
 
-        setToken(storedToken);
+        setToken(COOKIE_SESSION_MARKER);
         setUser(me);
       } catch {
-        clearAuthToken();
+        if (!isMounted) {
+          return;
+        }
+
+        setToken(null);
+        setUser(null);
       } finally {
         if (isMounted) {
           setIsInitializing(false);
@@ -79,8 +74,7 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
   }, []);
 
   const applyAuthenticatedSession = useCallback((auth: AuthPayload) => {
-    saveAuthToken(auth.token);
-    setToken(auth.token);
+    setToken(COOKIE_SESSION_MARKER);
     setUser(auth.user);
   }, []);
 
@@ -107,10 +101,12 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
   }, []);
 
   const logout = useCallback(() => {
-    clearAuthToken();
+    void logoutSession(token ?? undefined).catch(() => {
+      // Ignore backend logout failures and clear local session state regardless.
+    });
     setToken(null);
     setUser(null);
-  }, []);
+  }, [token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

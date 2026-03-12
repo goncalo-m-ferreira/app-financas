@@ -146,8 +146,8 @@ export type BudgetOverview = {
 };
 
 export type AuthPayload = {
-  token: string;
   user: ApiUser;
+  token?: string;
 };
 
 export type RegisterInput = {

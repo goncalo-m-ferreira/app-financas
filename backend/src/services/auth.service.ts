@@ -90,27 +90,6 @@ function throwConflictIfUniqueViolation(error: unknown, message: string): never 
   throw error;
 }
 
-function isAdminBootstrapEmail(email: string): boolean {
-  if (!env.adminEmail) {
-    return false;
-  }
-
-  return email.trim().toLowerCase() === env.adminEmail;
-}
-
-async function promoteToAdminIfBootstrapEmail(user: User): Promise<User> {
-  if (!isAdminBootstrapEmail(user.email) || user.role === UserRole.ADMIN) {
-    return user;
-  }
-
-  return prisma.user.update({
-    where: { id: user.id },
-    data: {
-      role: UserRole.ADMIN,
-    },
-  });
-}
-
 function createAccessToken(user: SafeUser): string {
   const signOptions: SignOptions = {
     subject: user.id,
@@ -189,7 +168,7 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
           email: normalizedEmail,
           passwordHash,
           defaultCurrency: input.defaultCurrency ?? 'EUR',
-          role: isAdminBootstrapEmail(normalizedEmail) ? UserRole.ADMIN : UserRole.USER,
+          role: UserRole.USER,
         },
       });
 
@@ -228,8 +207,7 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
     throw new AppError('Credenciais inválidas.', 401);
   }
 
-  const loginUser = await promoteToAdminIfBootstrapEmail(user);
-  const safeUser = toSafeUser(loginUser);
+  const safeUser = toSafeUser(user);
 
   return {
     token: createAccessToken(safeUser),
@@ -267,7 +245,7 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
           googleId: googleProfile.googleId,
           avatarUrl: googleProfile.avatarUrl,
           defaultCurrency: 'EUR',
-          role: isAdminBootstrapEmail(googleProfile.email) ? UserRole.ADMIN : UserRole.USER,
+          role: UserRole.USER,
         },
       });
 
@@ -292,11 +270,6 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
 
     if (googleProfile.avatarUrl && googleProfile.avatarUrl !== existingUser.avatarUrl) {
       updateData.avatarUrl = googleProfile.avatarUrl;
-      shouldUpdate = true;
-    }
-
-    if (isAdminBootstrapEmail(googleProfile.email) && existingUser.role !== UserRole.ADMIN) {
-      updateData.role = UserRole.ADMIN;
       shouldUpdate = true;
     }
 

@@ -4,8 +4,9 @@ import helmet from 'helmet';
 import { adminRouter } from './routes/admin.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { budgetsRouter } from './routes/budgets.routes.js';
-import { reportsPublicDir } from './config/paths.js';
+import { env } from './config/env.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
+import { requireCsrfForCookieSession } from './middlewares/csrf.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { requestIdMiddleware } from './middlewares/request-id.js';
 import { healthRouter } from './routes/health.routes.js';
@@ -22,18 +23,23 @@ const corsOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173'].filter(
   (origin): origin is string => Boolean(origin),
 );
 
+if (env.trustProxy) {
+  app.set('trust proxy', 1);
+}
+
 app.use(helmet());
 app.use(
   cors({
     origin: corsOrigins,
+    credentials: true,
   }),
 );
 app.use(express.json());
 app.use(requestIdMiddleware);
-app.use('/reports', express.static(reportsPublicDir));
 
 app.use('/api', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', requireCsrfForCookieSession);
 app.use('/api', adminRouter);
 app.use('/api', dashboardRouter);
 app.use('/api', budgetsRouter);

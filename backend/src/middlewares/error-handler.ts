@@ -43,9 +43,15 @@ export function errorHandler(
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    return res.status(400).json({
+    const statusCode =
+      err.code === 'P2002' ? 409 : err.code === 'P2025' ? 404 : 400;
+
+    console.warn(
+      `[db-error] requestId=${requestId ?? 'n/a'} code=${err.code}`,
+    );
+
+    return res.status(statusCode).json({
       message: 'Erro de base de dados.',
-      details: { code: err.code, meta: err.meta },
       requestId,
     });
   }

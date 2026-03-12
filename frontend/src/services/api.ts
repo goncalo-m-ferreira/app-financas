@@ -60,7 +60,7 @@ type RequestOptions = {
   signal?: AbortSignal;
 };
 
-const AUTH_TOKEN_STORAGE_KEY = 'app_financas.auth_token';
+const CSRF_COOKIE_NAME = 'app_financas_csrf';
 
 const fallbackApiUrl = 'http://localhost:4010';
 const apiUrl = (import.meta.env.VITE_API_URL ?? fallbackApiUrl).replace(/\/$/, '');
@@ -78,7 +78,29 @@ export class ApiClientError extends Error {
   }
 }
 
-function buildHeaders(options: RequestOptions): HeadersInit {
+function isUnsafeMethod(method: string): boolean {
+  return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+}
+
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const prefix = `${name}=`;
+  const cookie = document.cookie
+    .split(';')
+    .map((segment) => segment.trim())
+    .find((segment) => segment.startsWith(prefix));
+
+  if (!cookie) {
+    return null;
+  }
+
+  return decodeURIComponent(cookie.slice(prefix.length));
+}
+
+function buildHeaders(options: RequestOptions, method: string): HeadersInit {
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
@@ -87,8 +109,16 @@ function buildHeaders(options: RequestOptions): HeadersInit {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (options.token) {
+  if (options.token && options.token.includes('.')) {
     headers.Authorization = `Bearer ${options.token}`;
+  }
+
+  if (isUnsafeMethod(method)) {
+    const csrfToken = readCookie(CSRF_COOKIE_NAME);
+
+    if (csrfToken) {
+      headers['x-csrf-token'] = csrfToken;
+    }
   }
 
   return headers;
@@ -142,9 +172,10 @@ function buildQueryString(params: Record<string, string | number | boolean | und
 }
 
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const method = options.method ?? 'GET';
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers: buildHeaders(options),
+    method,
+    headers: buildHeaders(options, method),
     body:
       options.body === undefined
         ? undefined
@@ -152,6 +183,7 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
           ? options.body
           : JSON.stringify(options.body),
     signal: options.signal,
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -164,9 +196,10 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
 }
 
 async function requestBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const method = options.method ?? 'GET';
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers: buildHeaders(options),
+    method,
+    headers: buildHeaders(options, method),
     body:
       options.body === undefined
         ? undefined
@@ -174,6 +207,7 @@ async function requestBlob(path: string, options: RequestOptions = {}): Promise<
           ? options.body
           : JSON.stringify(options.body),
     signal: options.signal,
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -183,30 +217,6 @@ async function requestBlob(path: string, options: RequestOptions = {}): Promise<
   }
 
   return response.blob();
-}
-
-export function getStoredAuthToken(): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-}
-
-export function saveAuthToken(token: string): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
-}
-
-export function clearAuthToken(): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
 }
 
 export async function registerUser(payload: RegisterInput): Promise<AuthPayload> {
@@ -230,10 +240,17 @@ export async function loginWithGoogle(payload: GoogleAuthInput): Promise<AuthPay
   });
 }
 
-export async function fetchCurrentUser(token: string, signal?: AbortSignal): Promise<ApiUser> {
+export async function fetchCurrentUser(token?: string, signal?: AbortSignal): Promise<ApiUser> {
   return requestJson<ApiUser>('/auth/me', {
     token,
     signal,
+  });
+}
+
+export async function logoutSession(token?: string): Promise<{ success: boolean }> {
+  return requestJson<{ success: boolean }>('/auth/logout', {
+    method: 'POST',
+    token,
   });
 }
 
