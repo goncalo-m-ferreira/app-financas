@@ -20,30 +20,6 @@ import { walletsRouter } from './routes/wallets.routes.js';
 
 export const app = express();
 
-function normalizeOrigin(value: string): string {
-  return value.trim().replace(/\/+$/, '');
-}
-
-function parseAllowedOrigins(): string[] {
-  const rawValues = [
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_URLS,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-  ].filter((value): value is string => Boolean(value && value.trim().length > 0));
-
-  const origins = rawValues.flatMap((value) =>
-    value
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0),
-  );
-
-  return Array.from(new Set(origins.map((origin) => normalizeOrigin(origin))));
-}
-
-const allowedCorsOrigins = parseAllowedOrigins();
-
 if (env.trustProxy) {
   app.set('trust proxy', 1);
 }
@@ -57,8 +33,8 @@ app.use(
         return;
       }
 
-      const normalizedOrigin = normalizeOrigin(origin);
-      const isAllowed = allowedCorsOrigins.includes(normalizedOrigin);
+      const normalizedOrigin = origin.trim().replace(/\/+$/, '');
+      const isAllowed = env.allowedCorsOrigins.includes(normalizedOrigin);
 
       callback(null, isAllowed);
     },

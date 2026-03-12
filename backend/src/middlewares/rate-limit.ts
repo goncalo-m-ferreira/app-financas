@@ -5,6 +5,7 @@ type RateLimitOptions = {
   max: number;
   message: string;
   keyGenerator?: (req: Request) => string;
+  maxBuckets?: number;
 };
 
 type Bucket = {
@@ -13,27 +14,52 @@ type Bucket = {
 };
 
 const DEFAULT_CLEANUP_INTERVAL = 500;
+const DEFAULT_MAX_BUCKETS = 10_000;
 
 function resolveClientIp(req: Request): string {
-  const forwardedFor = req.header('x-forwarded-for');
+  return req.ip || req.socket.remoteAddress || 'unknown';
+}
 
-  if (forwardedFor) {
-    const firstIp = forwardedFor.split(',')[0]?.trim();
-    if (firstIp) {
-      return firstIp;
+function removeExpiredBuckets(buckets: Map<string, Bucket>, now: number): void {
+  for (const [bucketKey, bucketValue] of buckets.entries()) {
+    if (bucketValue.resetAt <= now) {
+      buckets.delete(bucketKey);
+    }
+  }
+}
+
+function evictOldestBucket(buckets: Map<string, Bucket>): void {
+  let oldestKey: string | null = null;
+  let oldestResetAt = Number.POSITIVE_INFINITY;
+
+  for (const [bucketKey, bucketValue] of buckets.entries()) {
+    if (bucketValue.resetAt < oldestResetAt) {
+      oldestResetAt = bucketValue.resetAt;
+      oldestKey = bucketKey;
     }
   }
 
-  return req.ip || req.socket.remoteAddress || 'unknown';
+  if (oldestKey) {
+    buckets.delete(oldestKey);
+  }
 }
 
 export function createIpRateLimiter(options: RateLimitOptions) {
   const buckets = new Map<string, Bucket>();
+  const maxBuckets = Math.max(1, options.maxBuckets ?? DEFAULT_MAX_BUCKETS);
   let requestsSinceCleanup = 0;
 
   return (req: Request, res: Response, next: NextFunction): void => {
     const now = Date.now();
     const key = options.keyGenerator?.(req) ?? resolveClientIp(req);
+
+    if (!buckets.has(key) && buckets.size >= maxBuckets) {
+      removeExpiredBuckets(buckets, now);
+      if (buckets.size >= maxBuckets) {
+        evictOldestBucket(buckets);
+      }
+    }
+
     const current = buckets.get(key);
     const isExpired = !current || current.resetAt <= now;
 
@@ -63,12 +89,7 @@ export function createIpRateLimiter(options: RateLimitOptions) {
 
     if (requestsSinceCleanup >= DEFAULT_CLEANUP_INTERVAL) {
       requestsSinceCleanup = 0;
-
-      for (const [bucketKey, bucketValue] of buckets.entries()) {
-        if (bucketValue.resetAt <= now) {
-          buckets.delete(bucketKey);
-        }
-      }
+      removeExpiredBuckets(buckets, now);
     }
 
     next();

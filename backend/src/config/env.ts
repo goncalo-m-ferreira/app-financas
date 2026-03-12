@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { buildAllowedCorsOrigins, isLocalhostOrigin } from './cors-origins.js';
 
 dotenv.config();
 
@@ -67,9 +68,24 @@ const cookieSecure = parseBoolean(process.env.COOKIE_SECURE, nodeEnv === 'produc
 const defaultSameSite: SameSiteValue = nodeEnv === 'production' ? 'none' : 'lax';
 const cookieSameSite = parseSameSite(process.env.COOKIE_SAMESITE, defaultSameSite);
 const trustProxy = parseBoolean(process.env.TRUST_PROXY, false);
+const frontendUrl = process.env.FRONTEND_URL;
+const frontendUrls = process.env.FRONTEND_URLS;
+const allowedCorsOrigins = buildAllowedCorsOrigins({
+  nodeEnv,
+  frontendUrl,
+  frontendUrls,
+});
 
 if (cookieSameSite === 'none' && !cookieSecure) {
   throw new Error('COOKIE_SECURE=true is required when COOKIE_SAMESITE=none.');
+}
+
+if (nodeEnv === 'production' && allowedCorsOrigins.length === 0) {
+  throw new Error('Configure FRONTEND_URL or FRONTEND_URLS in production.');
+}
+
+if (nodeEnv === 'production' && !allowedCorsOrigins.some((origin) => !isLocalhostOrigin(origin))) {
+  throw new Error('In production, FRONTEND_URL/FRONTEND_URLS must include at least one non-localhost origin.');
 }
 
 const recurringWorkerEnabled = parseBoolean(process.env.RECURRING_WORKER_ENABLED, false);
@@ -92,6 +108,7 @@ export const env = {
   cookieSecure,
   cookieSameSite,
   trustProxy,
+  allowedCorsOrigins,
   recurringWorkerEnabled,
   recurringWorkerIntervalMs,
   recurringRetryBackoffMs,

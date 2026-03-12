@@ -21,6 +21,7 @@ export const registerController = asyncHandler(async (req: Request, res: Respons
   setAuthSessionCookies(res, authResponse.token);
   res.status(201).json({
     user: authResponse.user,
+    token: authResponse.token,
   });
 });
 
@@ -30,6 +31,7 @@ export const loginController = asyncHandler(async (req: Request, res: Response) 
   setAuthSessionCookies(res, authResponse.token);
   res.status(200).json({
     user: authResponse.user,
+    token: authResponse.token,
   });
 });
 
@@ -39,6 +41,7 @@ export const googleAuthController = asyncHandler(async (req: Request, res: Respo
   setAuthSessionCookies(res, authResponse.token);
   res.status(200).json({
     user: authResponse.user,
+    token: authResponse.token,
   });
 });
 

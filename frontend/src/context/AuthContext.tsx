@@ -31,9 +31,36 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const COOKIE_SESSION_MARKER = 'cookie-session';
+const TOKEN_STORAGE_KEY = 'app_financas_auth_token';
+
+function isJwtLikeToken(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.includes('.');
+}
+
+function readStoredToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const stored = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  return isJwtLikeToken(stored) ? stored : null;
+}
+
+function writeStoredToken(token: string | null): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (isJwtLikeToken(token)) {
+    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+    return;
+  }
+
+  window.sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+}
 
 export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => readStoredToken());
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
@@ -42,7 +69,25 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     let isMounted = true;
 
     async function initializeAuth(): Promise<void> {
+      const storedToken = readStoredToken();
+
       try {
+        if (storedToken) {
+          try {
+            const meWithStoredToken = await fetchCurrentUser(storedToken, controller.signal);
+
+            if (!isMounted) {
+              return;
+            }
+
+            setToken(storedToken);
+            setUser(meWithStoredToken);
+            return;
+          } catch {
+            writeStoredToken(null);
+          }
+        }
+
         const me = await fetchCurrentUser(undefined, controller.signal);
 
         if (!isMounted) {
@@ -56,6 +101,7 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
           return;
         }
 
+        writeStoredToken(null);
         setToken(null);
         setUser(null);
       } finally {
@@ -74,7 +120,9 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
   }, []);
 
   const applyAuthenticatedSession = useCallback((auth: AuthPayload) => {
-    setToken(COOKIE_SESSION_MARKER);
+    const nextToken = isJwtLikeToken(auth.token) ? auth.token : COOKIE_SESSION_MARKER;
+    writeStoredToken(nextToken);
+    setToken(nextToken);
     setUser(auth.user);
   }, []);
 
@@ -104,6 +152,7 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     void logoutSession(token ?? undefined).catch(() => {
       // Ignore backend logout failures and clear local session state regardless.
     });
+    writeStoredToken(null);
     setToken(null);
     setUser(null);
   }, [token]);
