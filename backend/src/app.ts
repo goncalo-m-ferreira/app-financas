@@ -19,9 +19,30 @@ import { usersRouter } from './routes/users.routes.js';
 import { walletsRouter } from './routes/wallets.routes.js';
 
 export const app = express();
-const corsOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173'].filter(
-  (origin): origin is string => Boolean(origin),
-);
+
+function normalizeOrigin(value: string): string {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function parseAllowedOrigins(): string[] {
+  const rawValues = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URLS,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ].filter((value): value is string => Boolean(value && value.trim().length > 0));
+
+  const origins = rawValues.flatMap((value) =>
+    value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0),
+  );
+
+  return Array.from(new Set(origins.map((origin) => normalizeOrigin(origin))));
+}
+
+const allowedCorsOrigins = parseAllowedOrigins();
 
 if (env.trustProxy) {
   app.set('trust proxy', 1);
@@ -30,7 +51,17 @@ if (env.trustProxy) {
 app.use(helmet());
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const normalizedOrigin = normalizeOrigin(origin);
+      const isAllowed = allowedCorsOrigins.includes(normalizedOrigin);
+
+      callback(null, isAllowed);
+    },
     credentials: true,
   }),
 );

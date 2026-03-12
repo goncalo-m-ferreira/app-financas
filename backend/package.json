@@ -10,7 +10,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run",
     "prisma:generate": "prisma generate --schema ../prisma/schema.prisma",
-    "prisma:push": "prisma db push --schema ../prisma/schema.prisma",
+    "prisma:push": "prisma db execute --schema ../prisma/schema.prisma --file ../prisma/migrations/20260308150000_reports_v11/migration.sql && prisma db push --schema ../prisma/schema.prisma",
     "prisma:migrate": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" prisma migrate dev --schema ../prisma/schema.prisma",
     "prisma:seed": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" tsx ../prisma/seed.ts"
   },

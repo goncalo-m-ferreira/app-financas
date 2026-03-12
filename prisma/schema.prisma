@@ -166,8 +166,8 @@ model Report {
   id        String       @id @default(uuid())
   userId    String       @map("user_id")
   name      String
-  month     Int
-  year      Int
+  month     Int          @default(1)
+  year      Int          @default(1970)
   status    ReportStatus @default(PENDING)
   fileUrl   String?      @map("file_url")
   errorMessage String?   @map("error_message")
