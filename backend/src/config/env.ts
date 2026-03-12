@@ -64,7 +64,8 @@ const authCookieName = process.env.AUTH_COOKIE_NAME?.trim() || 'app_financas_ses
 const csrfCookieName = process.env.CSRF_COOKIE_NAME?.trim() || 'app_financas_csrf';
 const cookieDomain = process.env.COOKIE_DOMAIN?.trim() || undefined;
 const cookieSecure = parseBoolean(process.env.COOKIE_SECURE, nodeEnv === 'production');
-const cookieSameSite = parseSameSite(process.env.COOKIE_SAMESITE, 'lax');
+const defaultSameSite: SameSiteValue = nodeEnv === 'production' ? 'none' : 'lax';
+const cookieSameSite = parseSameSite(process.env.COOKIE_SAMESITE, defaultSameSite);
 const trustProxy = parseBoolean(process.env.TRUST_PROXY, false);
 
 if (cookieSameSite === 'none' && !cookieSecure) {
