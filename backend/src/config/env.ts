@@ -41,11 +41,13 @@ const rawJwtSecret = process.env.JWT_SECRET?.trim();
 
 if (nodeEnv === 'production') {
   if (!rawJwtSecret) {
-    throw new Error('JWT_SECRET must be set in production.');
+    throw new Error('JWT_SECRET must be set in production (minimum 32 characters).');
   }
 
   if (rawJwtSecret.length < 32) {
-    throw new Error('JWT_SECRET must have at least 32 characters in production.');
+    throw new Error(
+      `JWT_SECRET must have at least 32 characters in production (current length: ${rawJwtSecret.length}).`,
+    );
   }
 }
 
