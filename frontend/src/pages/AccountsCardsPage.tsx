@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ActionButton } from '../components/design/ActionButton';
+import { CONTROL_INPUT_CLASS_NAME, FieldControl } from '../components/design/FieldControl';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -212,32 +216,28 @@ export function AccountsCardsPage(): JSX.Element {
           title="Accounts & Cards"
           description="Manage all your wallets as modern debit and credit cards."
           actions={
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-            >
+            <ActionButton type="button" onClick={() => setIsModalOpen(true)}>
               Add New Account
-            </button>
+            </ActionButton>
           }
         />
 
         {errorMessage ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             {errorMessage}
-          </p>
+          </StatusBanner>
         ) : null}
 
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <SurfacePanel as="section" variant="solid" padding="md">
           {loading ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Loading accounts...</p>
+            <p className="text-sm text-[color:var(--text-muted)]">Loading accounts...</p>
           ) : sortedWallets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-950">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">No accounts found.</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <SurfacePanel as="div" variant="muted" padding="lg" className="border-dashed text-center">
+              <p className="text-sm font-medium text-[color:var(--text-main)]">No accounts found.</p>
+              <p className="mt-1 text-sm text-[color:var(--text-muted)]">
                 Click "Add New Account" to create your first card.
               </p>
-            </div>
+            </SurfacePanel>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {sortedWallets.map((wallet) => {
@@ -268,7 +268,7 @@ export function AccountsCardsPage(): JSX.Element {
                           type="button"
                           onClick={() => void handleDeleteWallet(wallet.id)}
                           disabled={isDeleting}
-                          className="rounded-md border border-white/35 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="ds-focus-ring rounded-md border border-white/35 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
                           aria-label={`Delete account ${wallet.name}`}
                         >
                           {isDeleting ? 'Removing...' : 'Delete'}
@@ -296,7 +296,7 @@ export function AccountsCardsPage(): JSX.Element {
               })}
             </div>
           )}
-        </section>
+        </SurfacePanel>
       </AppShell>
 
       {isModalOpen ? (
@@ -306,83 +306,75 @@ export function AccountsCardsPage(): JSX.Element {
           aria-modal="true"
           aria-labelledby="new-account-title"
         >
-          <div className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <SurfacePanel as="div" variant="solid" padding="md" className="w-full max-w-xl shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 id="new-account-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h2 id="new-account-title" className="ds-display text-lg font-semibold text-[color:var(--text-main)]">
                 Add New Account
               </h2>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                className="ds-focus-ring rounded-md px-2 py-1 text-sm text-[color:var(--text-muted)] transition hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--text-main)]"
               >
                 Close
               </button>
             </div>
 
             <form onSubmit={handleCreateWallet} className="grid gap-3 md:grid-cols-[1fr_180px_140px]">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</span>
+              <FieldControl label="Name" htmlFor="wallet-name">
                 <input
+                  id="wallet-name"
                   value={walletName}
                   onChange={(event) => setWalletName(event.target.value)}
                   required
                   maxLength={80}
                   placeholder="e.g. Platinum Visa"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  className={CONTROL_INPUT_CLASS_NAME}
                 />
-              </label>
+              </FieldControl>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Color</span>
+              <FieldControl label="Color" htmlFor="wallet-color">
                 <div className="flex items-center gap-2">
                   <input
+                    id="wallet-color"
                     type="color"
                     value={validateColor(walletColor) ? walletColor : DEFAULT_WALLET_COLOR}
                     onChange={(event) => setWalletColor(event.target.value)}
                     aria-label="Choose account color"
-                    className="h-10 w-12 rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                    className="h-10 w-12 rounded border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] p-1 dark:bg-[color:var(--surface-card)]"
                   />
                   <input
                     value={walletColor}
                     onChange={(event) => setWalletColor(event.target.value)}
                     maxLength={7}
                     placeholder="#0ea5e9"
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   />
                 </div>
-              </label>
+              </FieldControl>
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Balance</span>
+              <FieldControl label="Balance" htmlFor="wallet-balance">
                 <input
+                  id="wallet-balance"
                   type="number"
                   min="0"
                   step="0.01"
                   value={walletBalance}
                   onChange={(event) => setWalletBalance(event.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  className={CONTROL_INPUT_CLASS_NAME}
                 />
-              </label>
+              </FieldControl>
 
               <div className="md:col-span-3 flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
+                <ActionButton type="button" variant="neutral" onClick={() => setIsModalOpen(false)}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingWallet}
-                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
+                </ActionButton>
+                <ActionButton type="submit" disabled={isCreatingWallet}>
                   {isCreatingWallet ? 'Adding...' : 'Add Account'}
-                </button>
+                </ActionButton>
               </div>
             </form>
-          </div>
+          </SurfacePanel>
         </div>
       ) : null}
     </>

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -269,14 +272,14 @@ export function MailboxPage(): JSX.Element {
           description="Alerts and updates from your MoneyWise account."
           actions={
             <>
-              <label className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+              <label className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-xs text-[color:var(--text-muted)] shadow-[0_8px_18px_rgba(16,34,51,0.08)] backdrop-blur-sm">
                 <span className="mr-2 font-semibold">Read</span>
                 <select
                   aria-label="Read state"
                   value={readFilter}
                   onChange={(event) => setReadFilter(event.target.value as MailboxReadFilter)}
                   disabled={loading || isMarkingAllAsRead}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="ds-focus-ring rounded border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] px-2 py-1 text-xs text-[color:var(--text-main)] dark:bg-[color:var(--surface-card)]"
                 >
                   <option value="ALL">All</option>
                   <option value="UNREAD">Unread</option>
@@ -284,14 +287,14 @@ export function MailboxPage(): JSX.Element {
                 </select>
               </label>
 
-              <label className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+              <label className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-xs text-[color:var(--text-muted)] shadow-[0_8px_18px_rgba(16,34,51,0.08)] backdrop-blur-sm">
                 <span className="mr-2 font-semibold">Type</span>
                 <select
                   aria-label="Notification type"
                   value={typeFilter}
                   onChange={(event) => setTypeFilter(event.target.value as MailboxTypeFilter)}
                   disabled={loading || isMarkingAllAsRead}
-                  className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="ds-focus-ring rounded border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] px-2 py-1 text-xs text-[color:var(--text-main)] dark:bg-[color:var(--surface-card)]"
                 >
                   <option value="ALL">All</option>
                   <option value="BUDGET">Budget</option>
@@ -301,47 +304,43 @@ export function MailboxPage(): JSX.Element {
                 </select>
               </label>
 
-              <span className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+              <span className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-xs font-semibold text-[color:var(--text-muted)] shadow-[0_8px_18px_rgba(16,34,51,0.08)] backdrop-blur-sm">
                 Unread: {unreadCount}
               </span>
 
-              <button
+              <ActionButton
                 type="button"
+                variant="neutral"
                 onClick={() => {
                   void handleMarkAllAsRead();
                 }}
                 disabled={isMarkingAllAsRead || unreadCount <= 0}
-                className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {isMarkingAllAsRead ? 'Updating...' : 'Mark All As Read'}
-              </button>
+              </ActionButton>
 
-              <button
+              <ActionButton
                 type="button"
+                variant="neutral"
                 onClick={handleRefresh}
                 disabled={loading || isMarkingAllAsRead}
-                className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 Refresh
-              </button>
+              </ActionButton>
             </>
           }
         />
 
         {errorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{errorMessage}</p>
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
-            >
+            <ActionButton type="button" variant="danger" size="sm" onClick={handleRefresh} className="mt-3">
               Retry
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
-        <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <SurfacePanel as="section" variant="solid" padding="none">
           {loading ? (
             <div className="px-6 py-8 text-sm text-slate-500 dark:text-slate-400">Loading mailbox messages...</div>
           ) : notifications.length === 0 ? (
@@ -451,7 +450,7 @@ export function MailboxPage(): JSX.Element {
               </button>
             </div>
           ) : null}
-        </section>
+        </SurfacePanel>
       </AppShell>
 
       {successMessage ? (

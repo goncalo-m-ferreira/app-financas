@@ -6,6 +6,9 @@ import { EditTransactionModal } from '../components/dashboard/EditTransactionMod
 import { NewTransactionModal } from '../components/dashboard/NewTransactionModal';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
 import {
@@ -423,89 +426,90 @@ export function HomePage(): JSX.Element {
           actions={
             <>
               <MonthYearSelector variant="dashboardTopbar" />
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(true)}
-                disabled={loading || isRefreshing}
-                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
-              >
+              <ActionButton onClick={() => setIsModalOpen(true)} disabled={loading || isRefreshing}>
                 Add Transaction
-              </button>
+              </ActionButton>
             </>
           }
         />
 
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <StatusBanner tone="info">
             Loading command center data...
-          </div>
+          </StatusBanner>
         ) : null}
 
         {loadErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{loadErrorMessage}</p>
-            <button
-              type="button"
+            <ActionButton
+              variant="danger"
+              size="sm"
               onClick={() => setReloadKey((value) => value + 1)}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+              className="mt-3"
             >
               Retry
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
         {actionErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{actionErrorMessage}</p>
-          </section>
+          </StatusBanner>
         ) : null}
 
         {!loading && !loadErrorMessage ? (
           <>
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Monthly summary">
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   Spent This Month
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-main)]">
                   {formatCurrency(parseAmount(monthlySummary.spentThisMonth), currency)}
                 </p>
-              </article>
+              </SurfacePanel>
 
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   Wallet Total (All Wallets)
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-main)]">
                   {formatCurrency(walletTotal, currency)}
                 </p>
-              </article>
+              </SurfacePanel>
 
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Budget Alerts</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Budget Alerts</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-main)]">
                   {budgetStatus.warningCount} warning, {budgetStatus.exceededCount} exceeded
                 </p>
-              </article>
+              </SurfacePanel>
 
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   Recurring Attention
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-main)]">
                   {recurringStatus.needsAttentionCount} issues, {recurringStatus.dueSoonCount} due soon
                 </p>
-              </article>
+              </SurfacePanel>
             </section>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Wallet cards">
               {sortedWallets.length === 0 ? (
-                <article className="col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
-                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">No wallets yet</h2>
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                <SurfacePanel
+                  as="article"
+                  variant="solid"
+                  className="col-span-full border-dashed text-center"
+                  padding="lg"
+                >
+                  <h2 className="text-base font-semibold text-[color:var(--text-main)]">No wallets yet</h2>
+                  <p className="mt-2 text-sm text-[color:var(--text-muted)]">
                     Create wallets in Accounts & Cards to start adding transactions.
                   </p>
-                </article>
+                </SurfacePanel>
               ) : (
                 sortedWallets.map((wallet) => {
                   const walletColor = parseHexColor(wallet.color);
@@ -641,7 +645,7 @@ export function HomePage(): JSX.Element {
                   </p>
                   <Link
                     to="/budgets"
-                    className="mt-2 inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="mt-2 inline-flex text-sm font-semibold text-[color:var(--accent)] transition hover:text-[color:var(--accent-strong)]"
                   >
                     Go to Budgets
                   </Link>
@@ -654,7 +658,7 @@ export function HomePage(): JSX.Element {
                   </p>
                   <Link
                     to="/recurring-rules"
-                    className="mt-2 inline-flex text-sm font-semibold text-blue-600 transition hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="mt-2 inline-flex text-sm font-semibold text-[color:var(--accent)] transition hover:text-[color:var(--accent-strong)]"
                   >
                     Go to Recurring Rules
                   </Link>

@@ -3,10 +3,22 @@
 @tailwind utilities;
 
 :root {
-  color: #0f172a;
-  background-color: #eef0f1;
   color-scheme: light;
   font-family: 'Manrope', 'Avenir Next', 'Nunito Sans', sans-serif;
+  --font-display: 'Sora', 'Manrope', 'Avenir Next', sans-serif;
+  --text-main: #102233;
+  --text-muted: #4a5b6b;
+  --surface-shell: #edf1f3;
+  --surface-card: rgba(255, 255, 255, 0.78);
+  --surface-card-strong: #ffffff;
+  --surface-muted: #f2f5f7;
+  --surface-border: #cfdae3;
+  --accent: #0f766e;
+  --accent-strong: #0f9b8e;
+  --danger: #be123c;
+  --danger-strong: #9f1239;
+  --focus-ring: 0 0 0 3px rgba(15, 155, 142, 0.28);
+  --shadow-soft: 0 16px 34px rgba(16, 34, 51, 0.1);
 }
 
 * {
@@ -16,18 +28,69 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, #f9fafb 0%, #eef0f1 45%, #e5e7eb 100%);
-  transition: background-color 220ms ease;
+  color: var(--text-main);
+  background:
+    radial-gradient(1050px 620px at -8% -12%, rgba(15, 118, 110, 0.16), transparent 58%),
+    radial-gradient(840px 520px at 108% 2%, rgba(217, 119, 6, 0.14), transparent 55%),
+    linear-gradient(180deg, #f7f9fa 0%, var(--surface-shell) 100%);
+  transition: background-color 220ms ease, color 220ms ease;
 }
 
 html.dark {
   color-scheme: dark;
+  --text-main: #e2e8f0;
+  --text-muted: #9aa8bc;
+  --surface-shell: #06121d;
+  --surface-card: rgba(8, 23, 37, 0.7);
+  --surface-card-strong: #0a1a2b;
+  --surface-muted: #0d2438;
+  --surface-border: #2a4055;
+  --accent: #14b8a6;
+  --accent-strong: #0ea5a3;
+  --danger: #fb7185;
+  --danger-strong: #e11d48;
+  --focus-ring: 0 0 0 3px rgba(20, 184, 166, 0.35);
+  --shadow-soft: 0 18px 36px rgba(2, 6, 23, 0.55);
 }
 
 html.dark body {
-  background: radial-gradient(circle at top right, #111827 0%, #0b1220 45%, #020617 100%);
+  background:
+    radial-gradient(1080px 680px at -10% -12%, rgba(20, 184, 166, 0.16), transparent 58%),
+    radial-gradient(880px 500px at 112% 4%, rgba(251, 113, 133, 0.11), transparent 56%),
+    linear-gradient(180deg, #081523 0%, #040b13 100%);
 }
 
 button {
   font: inherit;
+}
+
+.ds-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.ds-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@keyframes dsFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ds-reveal {
+  animation: dsFadeUp 380ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-reveal {
+    animation: none;
+  }
 }

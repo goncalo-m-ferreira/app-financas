@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ActionButton } from '../design/ActionButton';
+import { CONTROL_INPUT_CLASS_NAME, FieldControl } from '../design/FieldControl';
+import { ModalSurface } from '../design/ModalSurface';
+import { StatusBanner } from '../design/StatusBanner';
 import type { ApiExpenseCategory, ApiWallet, CreateTransactionInput } from '../../types/finance';
 
 type NewTransactionModalProps = {
@@ -163,148 +167,127 @@ export function NewTransactionModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="new-transaction-title"
-    >
-      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="new-transaction-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            New Transaction
-          </h2>
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            disabled={isSubmitting}
-            className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+    <ModalSurface size="lg" labelledBy="new-transaction-title">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 id="new-transaction-title" className="ds-display text-lg font-semibold text-[color:var(--text-main)]">
+          New Transaction
+        </h2>
+        <ActionButton
+          type="button"
+          variant="neutral"
+          size="sm"
+          onClick={handleRequestClose}
+          disabled={isSubmitting}
+        >
+          Close
+        </ActionButton>
+      </div>
+
+      <form className="space-y-3" onSubmit={handleSubmit}>
+        <FieldControl label="Type" htmlFor="new-transaction-type">
+          <select
+            id="new-transaction-type"
+            value={type}
+            onChange={(event) => setType(event.target.value as 'INCOME' | 'EXPENSE')}
+            disabled={inputsDisabled}
+            className={CONTROL_INPUT_CLASS_NAME}
           >
-            Close
-          </button>
-        </div>
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+        </FieldControl>
 
-        <form className="space-y-3" onSubmit={handleSubmit}>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Type</span>
-            <select
-              value={type}
-              onChange={(event) => setType(event.target.value as 'INCOME' | 'EXPENSE')}
-              disabled={inputsDisabled}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            >
-              <option value="EXPENSE">Expense</option>
-              <option value="INCOME">Income</option>
-            </select>
-          </label>
+        <FieldControl label="Wallet" htmlFor="new-transaction-wallet">
+          <select
+            id="new-transaction-wallet"
+            value={walletId}
+            onChange={(event) => setWalletId(event.target.value)}
+            required
+            disabled={inputsDisabled}
+            className={CONTROL_INPUT_CLASS_NAME}
+          >
+            <option value="">Select wallet</option>
+            {wallets.map((wallet) => (
+              <option key={wallet.id} value={wallet.id}>
+                {wallet.name}
+              </option>
+            ))}
+          </select>
+        </FieldControl>
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Wallet</span>
+        <FieldControl label="Amount" htmlFor="new-transaction-amount">
+          <input
+            id="new-transaction-amount"
+            ref={amountInputRef}
+            type="number"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            min="0"
+            step="0.01"
+            required
+            disabled={inputsDisabled}
+            className={CONTROL_INPUT_CLASS_NAME}
+          />
+        </FieldControl>
+
+        <FieldControl label="Description" htmlFor="new-transaction-description">
+          <input
+            id="new-transaction-description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            maxLength={255}
+            disabled={inputsDisabled}
+            className={CONTROL_INPUT_CLASS_NAME}
+          />
+        </FieldControl>
+
+        <FieldControl label="Date and time" htmlFor="new-transaction-date">
+          <input
+            id="new-transaction-date"
+            type="datetime-local"
+            value={transactionDate}
+            onChange={(event) => setTransactionDate(event.target.value)}
+            required
+            disabled={inputsDisabled}
+            className={CONTROL_INPUT_CLASS_NAME}
+          />
+        </FieldControl>
+
+        {type === 'EXPENSE' ? (
+          <FieldControl label="Category" htmlFor="new-transaction-category">
             <select
-              value={walletId}
-              onChange={(event) => setWalletId(event.target.value)}
+              id="new-transaction-category"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
               required
               disabled={inputsDisabled}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={CONTROL_INPUT_CLASS_NAME}
             >
-              <option value="">Select wallet</option>
-              {wallets.map((wallet) => (
-                <option key={wallet.id} value={wallet.id}>
-                  {wallet.name}
+              <option value="">Select category</option>
+              {expenseCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
                 </option>
               ))}
             </select>
-          </label>
+          </FieldControl>
+        ) : null}
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Amount</span>
-            <input
-              ref={amountInputRef}
-              type="number"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              min="0"
-              step="0.01"
-              required
-              disabled={inputsDisabled}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            />
-          </label>
+        {!hasWallets ? (
+          <StatusBanner tone="info">No wallets found. Create a wallet first in Accounts &amp; Cards.</StatusBanner>
+        ) : null}
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</span>
-            <input
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              maxLength={255}
-              disabled={inputsDisabled}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            />
-          </label>
+        {errorMessage ? <StatusBanner tone="danger">{errorMessage}</StatusBanner> : null}
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Date and time</span>
-            <input
-              type="datetime-local"
-              value={transactionDate}
-              onChange={(event) => setTransactionDate(event.target.value)}
-              required
-              disabled={inputsDisabled}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            />
-          </label>
-
-          {type === 'EXPENSE' ? (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Category</span>
-              <select
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-                required
-                disabled={inputsDisabled}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-              >
-                <option value="">Select category</option>
-                {expenseCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-
-          {!hasWallets ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              No wallets found. Create a wallet first in Accounts & Cards.
-            </p>
-          ) : null}
-
-          {errorMessage ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {errorMessage}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleRequestClose}
-              disabled={isSubmitting}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={inputsDisabled}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSubmitting ? 'Saving...' : 'Create transaction'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <ActionButton type="button" variant="neutral" onClick={handleRequestClose} disabled={isSubmitting}>
+            Cancel
+          </ActionButton>
+          <ActionButton type="submit" disabled={isSubmitting || !hasWallets}>
+            {isSubmitting ? 'Saving...' : 'Create transaction'}
+          </ActionButton>
+        </div>
+      </form>
+    </ModalSurface>
   );
 }

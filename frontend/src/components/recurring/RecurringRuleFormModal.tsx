@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ActionButton } from '../design/ActionButton';
+import { CONTROL_INPUT_CLASS_NAME } from '../design/FieldControl';
+import { ModalSurface } from '../design/ModalSurface';
+import { StatusBanner } from '../design/StatusBanner';
 import type {
   ApiExpenseCategory,
   ApiRecurringRule,
@@ -543,35 +547,30 @@ export function RecurringRuleFormModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="recurring-rule-form-title"
-    >
-      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+    <ModalSurface size="4xl" labelledBy="recurring-rule-form-title" className="overflow-hidden p-0">
         <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2
                 id="recurring-rule-form-title"
-                className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+                className="ds-display text-lg font-semibold text-[color:var(--text-main)]"
               >
                 {title}
               </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-sm text-[color:var(--text-muted)]">
                 Edits affect future executions only.
               </p>
             </div>
-            <button
+            <ActionButton
               ref={closeButtonRef}
               type="button"
+              variant="neutral"
+              size="sm"
               onClick={handleRequestClose}
               disabled={isSubmitting}
-              className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               Close
-            </button>
+            </ActionButton>
           </div>
         </div>
 
@@ -594,7 +593,7 @@ export function RecurringRuleFormModal({
                       }))
                     }
                     disabled={isEditMode}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   >
                     <option value="EXPENSE">Expense</option>
                     <option value="INCOME">Income</option>
@@ -613,7 +612,7 @@ export function RecurringRuleFormModal({
                     step="0.01"
                     required
                     disabled={!hasWallets}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   />
                 </label>
 
@@ -626,7 +625,7 @@ export function RecurringRuleFormModal({
                     onChange={(event) => setForm((current) => ({ ...current, walletId: event.target.value }))}
                     required
                     disabled={!hasWallets}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   >
                     <option value="">Select wallet</option>
                     {wallets.map((wallet) => (
@@ -647,7 +646,7 @@ export function RecurringRuleFormModal({
                       onChange={(event) => setForm((current) => ({ ...current, categoryId: event.target.value }))}
                       required
                       disabled={!hasWallets}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      className={CONTROL_INPUT_CLASS_NAME}
                     >
                       <option value="">Select category</option>
                       {expenseCategories.map((category) => (
@@ -672,7 +671,7 @@ export function RecurringRuleFormModal({
                     onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                     maxLength={255}
                     disabled={!hasWallets}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   />
                 </label>
 
@@ -711,7 +710,7 @@ export function RecurringRuleFormModal({
                         frequency: event.target.value as RecurringFrequency,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   >
                     <option value="DAILY">Daily</option>
                     <option value="WEEKLY">Weekly</option>
@@ -729,7 +728,7 @@ export function RecurringRuleFormModal({
                     value={form.startAt}
                     onChange={(event) => setForm((current) => ({ ...current, startAt: event.target.value }))}
                     required
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   />
                 </label>
 
@@ -742,7 +741,7 @@ export function RecurringRuleFormModal({
                     onChange={(event) => setForm((current) => ({ ...current, timezone: event.target.value }))}
                     required
                     placeholder="Europe/Lisbon"
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   />
                 </label>
               </div>
@@ -766,7 +765,7 @@ export function RecurringRuleFormModal({
                         endMode: event.target.value as RecurringEndMode,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className={CONTROL_INPUT_CLASS_NAME}
                   >
                     <option value="NONE">None</option>
                     <option value="UNTIL_DATE">Until date</option>
@@ -784,7 +783,7 @@ export function RecurringRuleFormModal({
                       value={form.endAt}
                       onChange={(event) => setForm((current) => ({ ...current, endAt: event.target.value }))}
                       required
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      className={CONTROL_INPUT_CLASS_NAME}
                     />
                   </label>
                 ) : null}
@@ -803,7 +802,7 @@ export function RecurringRuleFormModal({
                         setForm((current) => ({ ...current, maxOccurrences: event.target.value }))
                       }
                       required
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      className={CONTROL_INPUT_CLASS_NAME}
                     />
                   </label>
                 ) : null}
@@ -817,14 +816,15 @@ export function RecurringRuleFormModal({
                 </h3>
 
                 {isEditMode ? (
-                  <button
+                  <ActionButton
                     type="button"
+                    variant="neutral"
+                    size="sm"
                     onClick={() => void handleRefreshPreview()}
                     disabled={previewLoading}
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     {previewLoading ? 'Refreshing...' : 'Refresh preview'}
-                  </button>
+                  </ActionButton>
                 ) : null}
               </div>
 
@@ -833,7 +833,7 @@ export function RecurringRuleFormModal({
               </p>
 
               {!isEditMode ? (
-                <div className="mt-3 rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                <div className="mt-3 rounded-md border border-dashed border-[color:var(--surface-border)] bg-[color:var(--surface-muted)] px-3 py-3 text-sm text-[color:var(--text-muted)]">
                   Preview will be available after the first save.
                 </div>
               ) : (
@@ -843,20 +843,19 @@ export function RecurringRuleFormModal({
                   </p>
 
                   {previewError ? (
-                    <div
-                      className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-                      role="alert"
-                    >
+                    <StatusBanner tone="danger" className="mt-3" role="alert">
                       <p>{previewError}</p>
-                      <button
+                      <ActionButton
                         type="button"
+                        variant="danger"
+                        size="sm"
                         onClick={() => void handleRefreshPreview()}
                         disabled={previewLoading}
-                        className="mt-2 rounded-md bg-rose-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
+                        className="mt-2"
                       >
                         {previewLoading ? 'Retrying...' : 'Retry preview'}
-                      </button>
-                    </div>
+                      </ActionButton>
+                    </StatusBanner>
                   ) : null}
 
                   {!previewError ? (
@@ -903,40 +902,35 @@ export function RecurringRuleFormModal({
             </section>
 
             {!hasWallets ? (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                No wallets found. Create a wallet first in Accounts & Cards.
-              </p>
+              <StatusBanner tone="info">
+                No wallets found. Create a wallet first in Accounts &amp; Cards.
+              </StatusBanner>
             ) : null}
 
             {errorMessage ? (
-              <p
-                className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
-                role="alert"
-              >
+              <StatusBanner tone="danger" role="alert">
                 {errorMessage}
-              </p>
+              </StatusBanner>
             ) : null}
           </div>
 
           <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-700">
-            <button
+            <ActionButton
               type="button"
+              variant="neutral"
               onClick={handleRequestClose}
               disabled={isSubmitting}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Cancel
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               type="submit"
               disabled={isSubmitting || !hasWallets}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? 'Saving...' : isEditMode ? 'Save changes' : 'Create rule'}
-            </button>
+            </ActionButton>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalSurface>
   );
 }

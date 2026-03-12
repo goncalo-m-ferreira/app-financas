@@ -40,7 +40,7 @@ function joinClassNames(...classes: Array<string | undefined>): string {
 
 function resolveWrapperClassName(variant: MonthYearSelectorVariant): string {
   if (variant === 'dashboardTopbar') {
-    return 'inline-flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/70 bg-white/75 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65';
+    return 'inline-flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] p-1.5 shadow-[0_8px_18px_rgba(16,34,51,0.08)] backdrop-blur-sm';
   }
 
   return 'flex items-center gap-2';
@@ -48,10 +48,10 @@ function resolveWrapperClassName(variant: MonthYearSelectorVariant): string {
 
 function resolveSelectClassName(variant: MonthYearSelectorVariant): string {
   if (variant === 'dashboardTopbar') {
-    return 'h-9 rounded-lg border border-transparent bg-slate-100/80 px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-cyan-500/70 focus:ring-2 focus:ring-cyan-500/30 dark:bg-slate-800/75 dark:text-slate-100 dark:focus:border-cyan-400/70 dark:focus:ring-cyan-400/30';
+    return 'ds-focus-ring h-9 rounded-lg border border-transparent bg-[color:var(--surface-muted)] px-3 text-sm font-medium text-[color:var(--text-main)] outline-none transition focus:border-[color:var(--accent)]';
   }
 
-  return 'rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200';
+  return 'ds-focus-ring rounded-md border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] px-2.5 py-1.5 text-sm text-[color:var(--text-main)] outline-none transition dark:bg-[color:var(--surface-card)]';
 }
 
 export function MonthYearSelector({

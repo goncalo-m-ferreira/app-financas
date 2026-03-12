@@ -1,4 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { RecurringCancelConfirmModal } from '../components/recurring/RecurringCancelConfirmModal';
 import { RecurringPreviewModal } from '../components/recurring/RecurringPreviewModal';
 import { RecurringRuleFormModal } from '../components/recurring/RecurringRuleFormModal';
@@ -710,8 +713,8 @@ export function RecurringRulesPage(): JSX.Element {
           actions={
             activeSegment === 'RULES' ? (
               <>
-                <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm text-[color:var(--text-main)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                     Status
                   </span>
                   <select
@@ -730,8 +733,8 @@ export function RecurringRulesPage(): JSX.Element {
                   </select>
                 </label>
 
-                <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm text-[color:var(--text-main)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                     Frequency
                   </span>
                   <select
@@ -750,29 +753,21 @@ export function RecurringRulesPage(): JSX.Element {
                   </select>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={openCreateModal}
-                  className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-                >
+                <ActionButton type="button" onClick={openCreateModal}>
                   Add Rule
-                </button>
+                </ActionButton>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-              >
+              <ActionButton type="button" onClick={openCreateModal}>
                 Add Rule
-              </button>
+              </ActionButton>
             )
           }
         />
 
-        <section className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+        <SurfacePanel as="section" variant="solid" padding="sm">
           <div
-            className="inline-flex rounded-lg bg-slate-100 p-1 dark:bg-slate-950"
+            className="inline-flex rounded-lg bg-[color:var(--surface-muted)] p-1"
             role="tablist"
             aria-label="Recurring content segments"
           >
@@ -786,8 +781,8 @@ export function RecurringRulesPage(): JSX.Element {
               className={[
                 'rounded-md px-4 py-2 text-sm font-semibold transition',
                 activeSegment === 'RULES'
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100',
+                  ? 'bg-[color:var(--surface-card-strong)] text-[color:var(--text-main)] shadow-sm dark:bg-[color:var(--surface-card)]'
+                  : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]',
               ].join(' ')}
             >
               Rules
@@ -802,38 +797,34 @@ export function RecurringRulesPage(): JSX.Element {
               className={[
                 'rounded-md px-4 py-2 text-sm font-semibold transition',
                 activeSegment === 'EXECUTION_HISTORY'
-                  ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-100'
-                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100',
+                  ? 'bg-[color:var(--surface-card-strong)] text-[color:var(--text-main)] shadow-sm dark:bg-[color:var(--surface-card)]'
+                  : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-main)]',
               ].join(' ')}
             >
               Execution History
             </button>
           </div>
-        </section>
+        </SurfacePanel>
 
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <StatusBanner tone="info">
             Loading recurring rules...
-          </div>
+          </StatusBanner>
         ) : null}
 
         {loadErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{loadErrorMessage}</p>
-            <button
-              type="button"
-              onClick={handleRetryInitialLoad}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
-            >
+            <ActionButton type="button" variant="danger" size="sm" onClick={handleRetryInitialLoad} className="mt-3">
               Retry
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
         {actionErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{actionErrorMessage}</p>
-          </section>
+          </StatusBanner>
         ) : null}
 
         {activeSegment === 'RULES' ? (
@@ -844,30 +835,30 @@ export function RecurringRulesPage(): JSX.Element {
             className="space-y-3"
           >
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Recurring summary">
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Active</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{summary.active}</p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Paused</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{summary.paused}</p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Active</p>
+                <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">{summary.active}</p>
+              </SurfacePanel>
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Paused</p>
+                <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">{summary.paused}</p>
+              </SurfacePanel>
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   Due / Next 7 days
                 </p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">
                   {summary.dueSoon}
                 </p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              </SurfacePanel>
+              <SurfacePanel as="article" variant="solid" padding="sm">
+                <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   Needs attention
                 </p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">
                   {summary.needsAttention}
                 </p>
-              </article>
+              </SurfacePanel>
             </section>
 
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
@@ -885,13 +876,9 @@ export function RecurringRulesPage(): JSX.Element {
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                     Create your first recurring rule to automate regular income and expenses.
                   </p>
-                  <button
-                    type="button"
-                    onClick={openCreateModal}
-                    className="mt-4 inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-                  >
+                  <ActionButton type="button" onClick={openCreateModal} className="mt-4">
                     Add Rule
-                  </button>
+                  </ActionButton>
                 </div>
               ) : null}
 
@@ -900,17 +887,19 @@ export function RecurringRulesPage(): JSX.Element {
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     No rules match current filters.
                   </p>
-                  <button
+                  <ActionButton
                     type="button"
+                    variant="neutral"
+                    size="sm"
                     onClick={() => {
                       setStatusFilter('ALL');
                       setFrequencyFilter('ALL');
                       setHighlightedRuleId(null);
                     }}
-                    className="mt-3 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    className="mt-3"
                   >
                     Clear filters
-                  </button>
+                  </ActionButton>
                 </div>
               ) : null}
 
@@ -1086,8 +1075,8 @@ export function RecurringRulesPage(): JSX.Element {
                   Execution History
                 </h2>
 
-                <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm text-[color:var(--text-main)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                     Status
                   </span>
                   <select
@@ -1106,8 +1095,8 @@ export function RecurringRulesPage(): JSX.Element {
                   </select>
                 </label>
 
-                <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm text-[color:var(--text-main)]">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                     Rule
                   </span>
                   <select
@@ -1134,16 +1123,12 @@ export function RecurringRulesPage(): JSX.Element {
             ) : null}
 
             {historyInitialErrorMessage ? (
-              <section className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+              <StatusBanner tone="danger" className="m-5">
                 <p>{historyInitialErrorMessage}</p>
-                <button
-                  type="button"
-                  onClick={handleRetryHistoryLoad}
-                  className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
-                >
+                <ActionButton type="button" variant="danger" size="sm" onClick={handleRetryHistoryLoad} className="mt-3">
                   Retry
-                </button>
-              </section>
+                </ActionButton>
+              </StatusBanner>
             ) : null}
 
             {!historyLoading && !historyInitialErrorMessage && historyItems.length === 0 ? (
@@ -1356,29 +1341,32 @@ export function RecurringRulesPage(): JSX.Element {
             ) : null}
 
             {historyLoadMoreErrorMessage ? (
-              <section className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+              <StatusBanner tone="danger" className="m-5">
                 <p>{historyLoadMoreErrorMessage}</p>
-                <button
+                <ActionButton
                   type="button"
+                  variant="danger"
+                  size="sm"
                   onClick={() => void handleLoadMoreHistory()}
                   disabled={historyLoadingMore || historyLoading}
-                  className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+                  className="mt-3"
                 >
                   {historyLoadingMore ? 'Retrying...' : 'Retry load more'}
-                </button>
-              </section>
+                </ActionButton>
+              </StatusBanner>
             ) : null}
 
             {!historyLoading && !historyInitialErrorMessage && canLoadMoreHistory ? (
               <div className="border-t border-slate-100 px-5 py-4 text-right dark:border-slate-800">
-                <button
+                <ActionButton
                   type="button"
+                  variant="neutral"
+                  size="sm"
                   onClick={() => void handleLoadMoreHistory()}
                   disabled={historyLoadingMore || historyLoading}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   {historyLoadingMore ? 'Loading...' : 'Load more'}
-                </button>
+                </ActionButton>
               </div>
             ) : null}
           </section>

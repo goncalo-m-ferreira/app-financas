@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ActionButton } from '../design/ActionButton';
+import { CONTROL_INPUT_CLASS_NAME, FieldControl } from '../design/FieldControl';
+import { ModalSurface } from '../design/ModalSurface';
+import { StatusBanner } from '../design/StatusBanner';
 import type {
   ApiBudget,
   ApiExpenseCategory,
@@ -175,116 +179,92 @@ export function NewBudgetModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="new-budget-title"
-    >
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="new-budget-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {isEditMode ? 'Edit Budget' : 'New Budget'}
-          </h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={handleRequestClose}
-            disabled={isSubmitting}
-            className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          >
-            Close
-          </button>
-        </div>
-
-        <form className="space-y-3" onSubmit={handleSubmit}>
-          {isEditMode && activeBudget ? (
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Category
-              </p>
-              <p className="mt-1 break-words font-semibold text-slate-900 dark:text-slate-100">
-                {activeBudget.category.name}
-              </p>
-            </div>
-          ) : (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Category</span>
-              <select
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-                required
-                disabled={hasNoCategories || hasNoAvailableCategories || isSubmitting}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-              >
-                <option value="">Select category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Monthly limit</span>
-            <input
-              ref={amountInputRef}
-              type="number"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              min="0"
-              step="0.01"
-              required
-              disabled={((hasNoCategories || hasNoAvailableCategories) && !isEditMode) || isSubmitting}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            />
-          </label>
-
-          {hasNoCategories && !isEditMode ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              No categories found. Please create an expense category first.
-            </p>
-          ) : null}
-
-          {hasNoAvailableCategories && !isEditMode ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              All categories already have a budget. Edit an existing budget before creating a new one.
-            </p>
-          ) : null}
-
-          {localMessage ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-              {localMessage}
-            </p>
-          ) : null}
-
-          {errorMessage ? (
-            <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {errorMessage}
-            </p>
-          ) : null}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleRequestClose}
-              disabled={isSubmitting}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || (!isEditMode && (hasNoCategories || hasNoAvailableCategories))}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSubmitting ? 'Saving...' : isEditMode ? 'Save changes' : 'Create budget'}
-            </button>
-          </div>
-        </form>
+    <ModalSurface size="sm" labelledBy="new-budget-title">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 id="new-budget-title" className="ds-display text-lg font-semibold text-[color:var(--text-main)]">
+          {isEditMode ? 'Edit Budget' : 'New Budget'}
+        </h2>
+        <ActionButton
+          ref={closeButtonRef}
+          type="button"
+          variant="neutral"
+          size="sm"
+          onClick={handleRequestClose}
+          disabled={isSubmitting}
+        >
+          Close
+        </ActionButton>
       </div>
-    </div>
+
+      <form className="space-y-3" onSubmit={handleSubmit}>
+        {isEditMode && activeBudget ? (
+          <section className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+              Category
+            </p>
+            <p className="mt-1 break-words font-semibold text-[color:var(--text-main)]">{activeBudget.category.name}</p>
+          </section>
+        ) : (
+          <FieldControl label="Category" htmlFor="budget-category-id">
+            <select
+              id="budget-category-id"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+              required
+              disabled={hasNoCategories || hasNoAvailableCategories || isSubmitting}
+              className={CONTROL_INPUT_CLASS_NAME}
+            >
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </FieldControl>
+        )}
+
+        <FieldControl label="Monthly limit" htmlFor="budget-monthly-limit">
+          <input
+            id="budget-monthly-limit"
+            ref={amountInputRef}
+            type="number"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            min="0"
+            step="0.01"
+            required
+            disabled={((hasNoCategories || hasNoAvailableCategories) && !isEditMode) || isSubmitting}
+            className={CONTROL_INPUT_CLASS_NAME}
+          />
+        </FieldControl>
+
+        {hasNoCategories && !isEditMode ? (
+          <StatusBanner tone="info">No categories found. Please create an expense category first.</StatusBanner>
+        ) : null}
+
+        {hasNoAvailableCategories && !isEditMode ? (
+          <StatusBanner tone="info">
+            All categories already have a budget. Edit an existing budget before creating a new one.
+          </StatusBanner>
+        ) : null}
+
+        {localMessage ? <StatusBanner tone="info">{localMessage}</StatusBanner> : null}
+
+        {errorMessage ? <StatusBanner tone="danger">{errorMessage}</StatusBanner> : null}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <ActionButton type="button" variant="neutral" onClick={handleRequestClose} disabled={isSubmitting}>
+            Cancel
+          </ActionButton>
+          <ActionButton
+            type="submit"
+            disabled={isSubmitting || (!isEditMode && (hasNoCategories || hasNoAvailableCategories))}
+          >
+            {isSubmitting ? 'Saving...' : isEditMode ? 'Save changes' : 'Create budget'}
+          </ActionButton>
+        </div>
+      </form>
+    </ModalSurface>
   );
 }

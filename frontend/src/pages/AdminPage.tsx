@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -168,37 +171,35 @@ export function AdminPage(): JSX.Element {
         title="Admin"
         description="Overview of registered accounts on the platform."
         actions={
-          <button
-            type="button"
-            onClick={() => setGlobalReloadKey((value) => value + 1)}
-            className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
+          <ActionButton type="button" variant="neutral" onClick={() => setGlobalReloadKey((value) => value + 1)}>
             Refresh
-          </button>
+          </ActionButton>
         }
       />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Total Accounts</p>
-        <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+      <SurfacePanel as="section" variant="solid" padding="md">
+        <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Total Accounts</p>
+        <p className="mt-2 text-3xl font-semibold text-[color:var(--text-main)]">
           {overviewLoading ? '...' : overview.summary.totalUsers}
         </p>
-      </section>
+      </SurfacePanel>
 
       {overviewErrorMessage ? (
-        <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+        <StatusBanner tone="danger">
           <p>{overviewErrorMessage}</p>
-          <button
+          <ActionButton
             type="button"
+            variant="danger"
+            size="sm"
             onClick={() => setOverviewReloadKey((value) => value + 1)}
-            className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+            className="mt-3"
           >
             Retry overview
-          </button>
-        </section>
+          </ActionButton>
+        </StatusBanner>
       ) : null}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <SurfacePanel as="section" variant="solid" padding="none" className="overflow-hidden">
         <header className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Latest 20 Users
@@ -254,16 +255,16 @@ export function AdminPage(): JSX.Element {
             </table>
           </div>
         )}
-      </section>
+      </SurfacePanel>
 
-      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <SurfacePanel as="section" variant="solid" padding="md" className="space-y-4">
         <header className="flex flex-wrap items-center gap-3">
           <h2 className="mr-auto text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Recurring Operations
           </h2>
 
-          <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm text-[color:var(--text-main)]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
               Issue
             </span>
             <select
@@ -282,55 +283,57 @@ export function AdminPage(): JSX.Element {
         </header>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <article className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <SurfacePanel as="article" variant="muted" padding="sm">
+            <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
               Failed executions
             </p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">
               {operations.summary.failedExecutions}
             </p>
-          </article>
-          <article className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          </SurfacePanel>
+          <SurfacePanel as="article" variant="muted" padding="sm">
+            <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
               Paused rules
             </p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">
               {operations.summary.pausedRules}
             </p>
-          </article>
-          <article className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
-            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          </SurfacePanel>
+          <SurfacePanel as="article" variant="muted" padding="sm">
+            <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
               Affected users
             </p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            <p className="mt-1 text-2xl font-semibold text-[color:var(--text-main)]">
               {operations.summary.affectedUsers}
             </p>
-          </article>
+          </SurfacePanel>
         </div>
 
         {operationsLoading ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+          <StatusBanner tone="info">
             Loading recurring operations...
-          </div>
+          </StatusBanner>
         ) : null}
 
         {!operationsLoading && operationsErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{operationsErrorMessage}</p>
-            <button
+            <ActionButton
               type="button"
+              variant="danger"
+              size="sm"
               onClick={() => setOperationsReloadKey((value) => value + 1)}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+              className="mt-3"
             >
               Retry recurring operations
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
         {!operationsLoading && !operationsErrorMessage && operations.items.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+          <StatusBanner tone="info">
             No recurring operational issues found for the selected filter.
-          </div>
+          </StatusBanner>
         ) : null}
 
         {!operationsLoading && !operationsErrorMessage && operations.items.length > 0 ? (
@@ -428,7 +431,7 @@ export function AdminPage(): JSX.Element {
             </table>
           </div>
         ) : null}
-      </section>
+      </SurfacePanel>
     </AppShell>
   );
 }

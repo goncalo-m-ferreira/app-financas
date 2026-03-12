@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { BudgetCards } from '../components/budgets/BudgetCards';
 import { BudgetDeleteConfirmModal } from '../components/budgets/BudgetDeleteConfirmModal';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { NewBudgetModal } from '../components/budgets/NewBudgetModal';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
@@ -278,52 +281,50 @@ export function BudgetPage(): JSX.Element {
           actions={
             <>
               <MonthYearSelector variant="dashboardTopbar" />
-              <div className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+              <SurfacePanel as="div" variant="glass" padding="sm" className="text-xs text-[color:var(--text-muted)]">
                 Total limit:{' '}
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="font-semibold text-[color:var(--text-main)]">
                   {formatCurrency(totals.limit, currency)}
                 </span>
-              </div>
-              <div className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+              </SurfacePanel>
+              <SurfacePanel as="div" variant="glass" padding="sm" className="text-xs text-[color:var(--text-muted)]">
                 Total spent:{' '}
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                <span className="font-semibold text-[color:var(--text-main)]">
                   {formatCurrency(totals.spent, currency)}
                 </span>
-              </div>
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-              >
+              </SurfacePanel>
+              <ActionButton type="button" onClick={openCreateModal}>
                 New Budget
-              </button>
+              </ActionButton>
             </>
           }
         />
 
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <StatusBanner tone="info">
             Loading budgets from API...
-          </div>
+          </StatusBanner>
         ) : null}
 
         {errorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{errorMessage}</p>
-            <button
+            <ActionButton
               type="button"
+              variant="danger"
+              size="sm"
               onClick={() => setReloadKey((value) => value + 1)}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+              className="mt-3"
             >
               Retry
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
         {actionErrorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{actionErrorMessage}</p>
-          </section>
+          </StatusBanner>
         ) : null}
 
         {!loading && !errorMessage ? (

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { MonthYearSelector } from '../common/MonthYearSelector';
 import { useSearch } from '../../context/SearchContext';
 import { useDebounce } from '../../hooks/useDebounce';
+import { ActionButton } from '../design/ActionButton';
+import { SurfacePanel } from '../design/SurfacePanel';
 
 type TopHeaderProps = {
   balanceLabel: string;
@@ -33,24 +35,22 @@ export function TopHeader({
   }, [debouncedSearchInput, searchQuery, setSearchQuery]);
 
   return (
-    <header className="rounded-2xl border border-slate-200/70 bg-white/75 px-5 py-5 shadow-[0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-950/45 dark:shadow-[0_24px_45px_rgba(2,6,23,0.65)] lg:px-6 lg:py-6">
+    <SurfacePanel as="header" variant="glass" padding="lg" reveal>
       <div className="space-y-4">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
           <div className="min-w-0 space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
               Financial Overview
             </p>
             <p
               className={[
-                'text-3xl font-semibold tracking-tight sm:whitespace-nowrap',
-                isBalanceNegative
-                  ? 'text-rose-600 dark:text-rose-300'
-                  : 'text-slate-900 dark:text-slate-100',
+                'ds-display text-3xl font-semibold tracking-tight sm:whitespace-nowrap',
+                isBalanceNegative ? 'text-rose-600 dark:text-rose-300' : 'text-[color:var(--text-main)]',
               ].join(' ')}
             >
               {balanceLabel}
             </p>
-            <p className="max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+            <p className="max-w-2xl text-sm text-[color:var(--text-muted)]">
               Your balance, category spending, and recent activity for the selected month.
             </p>
           </div>
@@ -58,28 +58,20 @@ export function TopHeader({
           <div className="flex flex-wrap items-center gap-2.5 xl:justify-end">
             <MonthYearSelector variant="dashboardTopbar" className="shrink-0" />
 
-            <button
-              type="button"
-              onClick={onAddTransaction}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95"
-            >
+            <ActionButton onClick={onAddTransaction}>
               <PlusIcon />
               Add Transaction
-            </button>
+            </ActionButton>
 
-            <button
-              type="button"
-              onClick={onImportCsv}
-              className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
+            <ActionButton variant="neutral" onClick={onImportCsv}>
               Import CSV
-            </button>
+            </ActionButton>
           </div>
         </div>
 
         <label className="relative block w-full max-w-4xl">
           <span className="sr-only">Search transactions</span>
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-400">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]/75">
             <SearchIcon />
           </span>
           <input
@@ -87,11 +79,11 @@ export function TopHeader({
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search transactions..."
-            className="h-11 w-full rounded-xl border border-slate-300/50 bg-slate-800/50 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-300/90 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/35 dark:border-slate-700/60 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-400"
+            className="ds-focus-ring h-11 w-full rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] pl-10 pr-4 text-sm text-[color:var(--text-main)] outline-none transition placeholder:text-[color:var(--text-muted)]/80 dark:bg-[color:var(--surface-card)]"
           />
         </label>
       </div>
-    </header>
+    </SurfacePanel>
   );
 }
 

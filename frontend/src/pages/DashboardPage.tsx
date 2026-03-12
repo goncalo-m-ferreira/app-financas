@@ -6,6 +6,8 @@ import { ImportCsvModal } from '../components/dashboard/ImportCsvModal';
 import { NewTransactionModal } from '../components/dashboard/NewTransactionModal';
 import { TopHeader } from '../components/dashboard/TopHeader';
 import { TransactionsList } from '../components/dashboard/TransactionsList';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuth } from '../context/AuthContext';
 import { useDateFilter } from '../context/DateFilterContext';
@@ -368,22 +370,23 @@ export function DashboardPage(): JSX.Element {
         />
 
         {loading ? (
-          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <StatusBanner tone="info">
             Loading dashboard data...
-          </div>
+          </StatusBanner>
         ) : null}
 
         {errorMessage ? (
-          <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+          <StatusBanner tone="danger">
             <p>{errorMessage}</p>
-            <button
-              type="button"
+            <ActionButton
+              variant="danger"
+              size="sm"
               onClick={() => setReloadKey((value) => value + 1)}
-              className="mt-3 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500"
+              className="mt-3"
             >
               Retry
-            </button>
-          </section>
+            </ActionButton>
+          </StatusBanner>
         ) : null}
 
         {!errorMessage ? (

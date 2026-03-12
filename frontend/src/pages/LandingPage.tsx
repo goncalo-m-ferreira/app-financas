@@ -1,4 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { useAuth } from '../context/AuthContext';
 
 export function LandingPage(): JSX.Element {
@@ -9,29 +10,29 @@ export function LandingPage(): JSX.Element {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
-      <section className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">App Finanças</p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-900">Gestão financeira pessoal segura</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+      <SurfacePanel as="section" variant="solid" padding="lg" reveal className="w-full max-w-xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-muted)]">App Finanças</p>
+        <h1 className="ds-display mt-3 text-3xl font-semibold text-[color:var(--text-main)]">Gestão financeira pessoal segura</h1>
+        <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
           Entra na tua conta para ver dashboard, transações e categorias isoladas por utilizador.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             to="/login"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="ds-focus-ring inline-flex h-10 items-center justify-center rounded-xl border border-transparent bg-[linear-gradient(120deg,var(--accent)_0%,var(--accent-strong)_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_22px_rgba(15,118,110,0.25)] transition hover:brightness-[1.06]"
           >
             Login
           </Link>
           <Link
             to="/register"
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+            className="ds-focus-ring inline-flex h-10 items-center justify-center rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-4 text-sm font-semibold text-[color:var(--text-main)] transition hover:bg-[color:var(--surface-muted)]"
           >
             Registar
           </Link>
         </div>
-      </section>
+      </SurfacePanel>
     </main>
   );
 }

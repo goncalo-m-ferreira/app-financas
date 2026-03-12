@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MonthYearSelector } from '../components/common/MonthYearSelector';
+import { ActionButton } from '../components/design/ActionButton';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -252,13 +255,13 @@ export function ReportsPage(): JSX.Element {
           <>
             <MonthYearSelector variant="dashboardTopbar" />
 
-            <label className="rounded-xl border border-slate-200/70 bg-white/75 px-3 py-2 text-xs text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/65 dark:text-slate-300">
+            <label className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-card)] px-3 py-2 text-xs text-[color:var(--text-muted)] shadow-[0_8px_18px_rgba(16,34,51,0.08)] backdrop-blur-sm">
               <span className="mr-2 font-semibold">Status</span>
               <select
                 aria-label="Report status filter"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as StatusFilterOption)}
-                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="ds-focus-ring rounded border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] px-2 py-1 text-xs text-[color:var(--text-main)] dark:bg-[color:var(--surface-card)]"
               >
                 <option value="ALL">All</option>
                 <option value="PENDING">Pending</option>
@@ -267,34 +270,29 @@ export function ReportsPage(): JSX.Element {
               </select>
             </label>
 
-            <button
-              type="button"
-              onClick={() => void handleGenerateReport()}
-              disabled={isGenerating}
-              className="inline-flex h-10 items-center rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-4 text-sm font-semibold text-white shadow-md shadow-cyan-500/25 transition hover:from-blue-500 hover:to-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-65 disabled:shadow-none disabled:hover:from-blue-600 disabled:hover:to-cyan-500 disabled:active:scale-100"
-            >
+            <ActionButton type="button" onClick={() => void handleGenerateReport()} disabled={isGenerating}>
               {isGenerating ? 'Enqueuing...' : 'Generate Monthly Report'}
-            </button>
-            <button
+            </ActionButton>
+            <ActionButton
               type="button"
+              variant="neutral"
               onClick={() => setRefreshTick((current) => current + 1)}
-              className="inline-flex h-10 items-center rounded-lg border border-slate-300/80 bg-white/70 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Refresh
-            </button>
+            </ActionButton>
           </>
         }
       />
 
-      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
+      <SurfacePanel as="div" variant="muted" padding="sm" className="text-xs text-[color:var(--text-muted)]">
         Showing reports for <span className="font-semibold">{selectedMonthLabel}</span>. Month/year
         selection filters the list and is also used when generating new reports.
-      </div>
+      </SurfacePanel>
 
       {errorMessage ? (
-        <section className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+        <StatusBanner tone="danger">
           <p>{errorMessage}</p>
-        </section>
+        </StatusBanner>
       ) : null}
 
       {hasPendingReports ? (
@@ -303,7 +301,7 @@ export function ReportsPage(): JSX.Element {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <SurfacePanel as="section" variant="solid" padding="none" className="overflow-hidden">
         <header className="border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Your Reports
@@ -397,7 +395,7 @@ export function ReportsPage(): JSX.Element {
             </table>
           </div>
         )}
-      </section>
+      </SurfacePanel>
     </AppShell>
   );
 }

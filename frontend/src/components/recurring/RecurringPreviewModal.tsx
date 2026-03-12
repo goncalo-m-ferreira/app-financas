@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActionButton } from '../design/ActionButton';
+import { ModalSurface } from '../design/ModalSurface';
+import { StatusBanner } from '../design/StatusBanner';
 import type { ApiRecurringRule, RecurringPreviewResponse } from '../../types/finance';
 import { formatRecurringDateTime } from '../../utils/recurring';
 
@@ -130,89 +133,73 @@ export function RecurringPreviewModal({
   const previewTimezone = preview?.timezone ?? rule.timezone;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="recurring-preview-title"
-    >
-      <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 id="recurring-preview-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Preview Occurrences
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Preview does not create transactions.
-            </p>
-          </div>
-
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={onClose}
-            className="rounded-md px-2 py-1 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          >
-            Close
-          </button>
+    <ModalSurface size="2xl" labelledBy="recurring-preview-title">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 id="recurring-preview-title" className="ds-display text-lg font-semibold text-[color:var(--text-main)]">
+            Preview Occurrences
+          </h2>
+          <p className="mt-1 text-sm text-[color:var(--text-muted)]">Preview does not create transactions.</p>
         </div>
 
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950">
-          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Rule</p>
-          <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">
-            {rule.description?.trim() || `${rule.type} recurring rule`}
-          </p>
-
-          <p className="mt-3 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Timezone</p>
-          <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{previewTimezone}</p>
-
-          <p className="mt-3 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Next run</p>
-          <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">
-            {formatRecurringDateTime(preview?.nextRunAt ?? rule.nextRunAt, previewTimezone)} ({previewTimezone})
-          </p>
-        </div>
-
-        {loading ? (
-          <p className="mt-4 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-            Loading preview...
-          </p>
-        ) : null}
-
-        {errorMessage ? (
-          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">
-            <p>{errorMessage}</p>
-            <button
-              type="button"
-              onClick={() => {
-                void loadPreviewForRule(rule);
-              }}
-              disabled={loading}
-              className="mt-2 rounded-md bg-rose-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loading ? 'Retrying...' : 'Retry preview'}
-            </button>
-          </div>
-        ) : null}
-
-        {!loading && !errorMessage ? (
-          <ul className="mt-4 space-y-2">
-            {(preview?.occurrences ?? []).length === 0 ? (
-              <li className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
-                No upcoming occurrences.
-              </li>
-            ) : (
-              (preview?.occurrences ?? []).map((occurrence) => (
-                <li
-                  key={occurrence}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300"
-                >
-                  {formatRecurringDateTime(occurrence, previewTimezone)} ({previewTimezone})
-                </li>
-              ))
-            )}
-          </ul>
-        ) : null}
+        <ActionButton ref={closeButtonRef} type="button" variant="neutral" size="sm" onClick={onClose}>
+          Close
+        </ActionButton>
       </div>
-    </div>
+
+      <section className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-muted)] p-3">
+        <p className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Rule</p>
+        <p className="mt-1 text-sm font-medium text-[color:var(--text-main)]">
+          {rule.description?.trim() || `${rule.type} recurring rule`}
+        </p>
+
+        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Timezone</p>
+        <p className="mt-1 text-sm font-medium text-[color:var(--text-main)]">{previewTimezone}</p>
+
+        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Next run</p>
+        <p className="mt-1 text-sm font-medium text-[color:var(--text-main)]">
+          {formatRecurringDateTime(preview?.nextRunAt ?? rule.nextRunAt, previewTimezone)} ({previewTimezone})
+        </p>
+      </section>
+
+      {loading ? <StatusBanner className="mt-4">Loading preview...</StatusBanner> : null}
+
+      {errorMessage ? (
+        <StatusBanner tone="danger" className="mt-4" >
+          <p>{errorMessage}</p>
+          <ActionButton
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              void loadPreviewForRule(rule);
+            }}
+            disabled={loading}
+            className="mt-2"
+          >
+            {loading ? 'Retrying...' : 'Retry preview'}
+          </ActionButton>
+        </StatusBanner>
+      ) : null}
+
+      {!loading && !errorMessage ? (
+        <ul className="mt-4 space-y-2">
+          {(preview?.occurrences ?? []).length === 0 ? (
+            <li className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-muted)] px-3 py-3 text-sm text-[color:var(--text-muted)]">
+              No upcoming occurrences.
+            </li>
+          ) : (
+            (preview?.occurrences ?? []).map((occurrence) => (
+              <li
+                key={occurrence}
+                className="rounded-xl border border-[color:var(--surface-border)] bg-[color:var(--surface-muted)] px-3 py-2 text-sm text-[color:var(--text-main)]"
+              >
+                {formatRecurringDateTime(occurrence, previewTimezone)} ({previewTimezone})
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+    </ModalSurface>
   );
 }

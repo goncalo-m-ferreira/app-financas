@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ActionButton } from '../components/design/ActionButton';
+import { CONTROL_INPUT_CLASS_NAME, FieldControl } from '../components/design/FieldControl';
+import { StatusBanner } from '../components/design/StatusBanner';
+import { SurfacePanel } from '../components/design/SurfacePanel';
 import { AppShell } from '../components/layout/AppShell';
 import { PremiumPageHeader } from '../components/layout/PremiumPageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -167,69 +171,65 @@ export function CategoryEditorPage(): JSX.Element {
       />
 
       {errorMessage ? (
-        <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <StatusBanner tone="danger">
           {errorMessage}
-        </p>
+        </StatusBanner>
       ) : null}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <SurfacePanel as="section" variant="solid" padding="md">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Expense Categories</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="text-base font-semibold text-[color:var(--text-main)]">Expense Categories</h2>
+          <p className="mt-1 text-sm text-[color:var(--text-muted)]">
             Add and remove categories used across transactions and budgets.
           </p>
         </div>
 
         <form onSubmit={handleCreateCategory} className="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</span>
+          <FieldControl label="Name" htmlFor="category-name">
             <input
+              id="category-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
               maxLength={80}
               placeholder="e.g. Insurance"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+              className={CONTROL_INPUT_CLASS_NAME}
             />
-          </label>
+          </FieldControl>
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Color</span>
+          <FieldControl label="Color" htmlFor="category-color">
             <div className="flex items-center gap-2">
               <input
+                id="category-color"
                 type="color"
                 value={validateColor(color) ? color : DEFAULT_CATEGORY_COLOR}
                 onChange={(event) => setColor(event.target.value)}
                 aria-label="Choose category color"
-                className="h-10 w-12 rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                className="h-10 w-12 rounded border border-[color:var(--surface-border)] bg-[color:var(--surface-card-strong)] p-1 dark:bg-[color:var(--surface-card)]"
               />
               <input
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
                 maxLength={7}
                 placeholder="#60a5fa"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                className={CONTROL_INPUT_CLASS_NAME}
               />
             </div>
-          </label>
+          </FieldControl>
 
           <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={isCreating}
-              className="h-10 rounded-md bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
+            <ActionButton type="submit" disabled={isCreating}>
               {isCreating ? 'Adding...' : 'Add Category'}
-            </button>
+            </ActionButton>
           </div>
         </form>
 
         {loading ? (
-          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Loading categories...</p>
+          <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading categories...</p>
         ) : (
-          <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+          <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-lg border border-[color:var(--surface-border)] dark:divide-slate-700">
             {sortedCategories.length === 0 ? (
-              <li className="px-4 py-5 text-sm text-slate-500 dark:text-slate-400">No categories found.</li>
+              <li className="px-4 py-5 text-sm text-[color:var(--text-muted)]">No categories found.</li>
             ) : (
               sortedCategories.map((category) => {
                 const isDeleting = deletingIds.has(category.id);
@@ -240,7 +240,7 @@ export function CategoryEditorPage(): JSX.Element {
                 return (
                   <li
                     key={category.id}
-                    className="flex items-center justify-between gap-3 bg-white px-4 py-3 dark:bg-slate-900"
+                    className="flex items-center justify-between gap-3 bg-[color:var(--surface-card-strong)] px-4 py-3 dark:bg-[color:var(--surface-card)]"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <span
@@ -249,10 +249,10 @@ export function CategoryEditorPage(): JSX.Element {
                         aria-hidden="true"
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <p className="truncate text-sm font-medium text-[color:var(--text-main)]">
                           {category.name}
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{displayColor}</p>
+                        <p className="text-xs text-[color:var(--text-muted)]">{displayColor}</p>
                       </div>
                     </div>
 
@@ -271,7 +271,7 @@ export function CategoryEditorPage(): JSX.Element {
             )}
           </ul>
         )}
-      </section>
+      </SurfacePanel>
     </AppShell>
   );
 }
