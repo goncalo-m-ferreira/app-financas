@@ -69,6 +69,37 @@ describe('requireCsrfForCookieSession', () => {
     expect((error as AppError).statusCode).toBe(403);
   });
 
+  test('allows unsafe cookie-authenticated request without CSRF when origin is allowlisted', () => {
+    const { next } = executeMiddleware(
+      createMockRequest({
+        method: 'DELETE',
+        headers: {
+          cookie: 'app_financas_session=session-token',
+          origin: 'http://localhost:5173',
+        },
+      }),
+    );
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('rejects unsafe cookie-authenticated request without CSRF from non-allowlisted origin', () => {
+    const { next } = executeMiddleware(
+      createMockRequest({
+        method: 'DELETE',
+        headers: {
+          cookie: 'app_financas_session=session-token',
+          origin: 'https://evil.example.com',
+        },
+      }),
+    );
+
+    const [[error]] = vi.mocked(next).mock.calls as [[unknown]];
+    expect(error).toBeInstanceOf(AppError);
+    expect((error as AppError).message).toBe('Invalid or missing CSRF token.');
+    expect((error as AppError).statusCode).toBe(403);
+  });
+
   test('allows unsafe cookie-authenticated request when CSRF cookie and header match', () => {
     const { next } = executeMiddleware(
       createMockRequest({
