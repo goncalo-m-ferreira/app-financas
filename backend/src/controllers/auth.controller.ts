@@ -7,21 +7,25 @@ import {
   googleAuthBodySchema,
   loginBodySchema,
   registerBodySchema,
+  verifyEmailConfirmBodySchema,
+  verifyEmailRequestBodySchema,
 } from '../validations/auth.schemas.js';
 import {
+  confirmEmailVerificationToken,
   getAuthenticatedUser,
   login,
   loginWithGoogle,
+  requestEmailVerificationByEmail,
   register,
 } from '../services/auth.service.js';
 
 export const registerController = asyncHandler(async (req: Request, res: Response) => {
   const body = registerBodySchema.parse(req.body);
-  const authResponse = await register(body);
-  setAuthSessionCookies(res, authResponse.token);
+  const registerResponse = await register(body);
   res.status(201).json({
-    user: authResponse.user,
-    token: authResponse.token,
+    user: registerResponse.user,
+    requiresEmailVerification: registerResponse.requiresEmailVerification,
+    message: registerResponse.message,
   });
 });
 
@@ -57,4 +61,16 @@ export const logoutController = asyncHandler(async (_req: AuthenticatedRequest, 
   res.status(200).json({
     success: true,
   });
+});
+
+export const requestEmailVerificationController = asyncHandler(async (req: Request, res: Response) => {
+  const body = verifyEmailRequestBodySchema.parse(req.body);
+  const response = await requestEmailVerificationByEmail(body.email);
+  res.status(200).json(response);
+});
+
+export const confirmEmailVerificationController = asyncHandler(async (req: Request, res: Response) => {
+  const body = verifyEmailConfirmBodySchema.parse(req.body);
+  const response = await confirmEmailVerificationToken(body.token);
+  res.status(200).json(response);
 });

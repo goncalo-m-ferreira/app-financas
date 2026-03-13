@@ -148,6 +148,12 @@ export type BudgetOverview = {
 export type AuthPayload = {
   user: ApiUser;
   token?: string;
+  requiresEmailVerification?: boolean;
+  message?: string;
+};
+
+export type EmailVerificationResponse = {
+  message: string;
 };
 
 export type RegisterInput = {

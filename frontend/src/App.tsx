@@ -12,6 +12,7 @@ import { MailboxPage } from './pages/MailboxPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecurringRulesPage } from './pages/RecurringRulesPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
 
 function App(): JSX.Element {
   return (
@@ -19,6 +20,7 @@ function App(): JSX.Element {
       <Route path="/welcome" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />

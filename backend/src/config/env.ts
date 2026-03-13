@@ -91,6 +91,33 @@ if (nodeEnv === 'production' && !allowedCorsOrigins.some((origin) => !isLocalhos
 const recurringWorkerEnabled = parseBoolean(process.env.RECURRING_WORKER_ENABLED, false);
 const recurringWorkerIntervalMs = parsePositiveInt(process.env.RECURRING_WORKER_INTERVAL_MS, 60_000);
 const recurringRetryBackoffMs = parsePositiveInt(process.env.RECURRING_RETRY_BACKOFF_MS, 300_000);
+const emailVerificationTokenTtlMinutes = parsePositiveInt(
+  process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES,
+  1_440,
+);
+const emailVerificationResendCooldownSeconds = parsePositiveInt(
+  process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS,
+  60,
+);
+const fallbackFrontendOrigin = frontendUrl?.trim() || 'http://localhost:5173';
+const emailVerificationAppUrl =
+  process.env.EMAIL_VERIFICATION_APP_URL?.trim() ||
+  `${fallbackFrontendOrigin.replace(/\/+$/, '')}/verify-email`;
+const smtpHost = process.env.SMTP_HOST?.trim() || undefined;
+const smtpPort = parsePositiveInt(process.env.SMTP_PORT, 587);
+const smtpSecure = parseBoolean(process.env.SMTP_SECURE, false);
+const smtpUser = process.env.SMTP_USER?.trim() || undefined;
+const smtpPass = process.env.SMTP_PASS?.trim() || undefined;
+const smtpFrom = process.env.SMTP_FROM?.trim() || undefined;
+
+if (smtpUser && !smtpPass) {
+  throw new Error('SMTP_PASS is required when SMTP_USER is set.');
+}
+
+if (smtpPass && !smtpUser) {
+  throw new Error('SMTP_USER is required when SMTP_PASS is set.');
+}
+
 process.env.DATABASE_URL = databaseUrl;
 
 export const env = {
@@ -112,4 +139,13 @@ export const env = {
   recurringWorkerEnabled,
   recurringWorkerIntervalMs,
   recurringRetryBackoffMs,
+  emailVerificationTokenTtlMinutes,
+  emailVerificationResendCooldownSeconds,
+  emailVerificationAppUrl,
+  smtpHost,
+  smtpPort,
+  smtpSecure,
+  smtpUser,
+  smtpPass,
+  smtpFrom,
 };

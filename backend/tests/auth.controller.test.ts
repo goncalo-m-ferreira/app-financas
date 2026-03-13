@@ -2,21 +2,27 @@ import type { NextFunction, Request, Response } from 'express';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const {
+  confirmEmailVerificationTokenMock,
   registerMock,
   loginMock,
   loginWithGoogleMock,
+  requestEmailVerificationByEmailMock,
   setAuthSessionCookiesMock,
 } = vi.hoisted(() => ({
+  confirmEmailVerificationTokenMock: vi.fn(),
   registerMock: vi.fn(),
   loginMock: vi.fn(),
   loginWithGoogleMock: vi.fn(),
+  requestEmailVerificationByEmailMock: vi.fn(),
   setAuthSessionCookiesMock: vi.fn(),
 }));
 
 vi.mock('../src/services/auth.service.js', () => ({
+  confirmEmailVerificationToken: confirmEmailVerificationTokenMock,
   register: registerMock,
   login: loginMock,
   loginWithGoogle: loginWithGoogleMock,
+  requestEmailVerificationByEmail: requestEmailVerificationByEmailMock,
   getAuthenticatedUser: vi.fn(),
 }));
 
@@ -27,8 +33,10 @@ vi.mock('../src/utils/http-cookies.js', () => ({
 }));
 
 import {
+  confirmEmailVerificationController,
   googleAuthController,
   loginController,
+  requestEmailVerificationController,
   registerController,
 } from '../src/controllers/auth.controller.js';
 
@@ -61,7 +69,7 @@ describe('auth controllers', () => {
     vi.clearAllMocks();
   });
 
-  test('registerController returns user and token and sets cookies', async () => {
+  test('registerController returns verification-required payload and does not set auth cookies', async () => {
     const req = {
       body: {
         name: 'User One',
@@ -73,7 +81,6 @@ describe('auth controllers', () => {
     const next = createMockNext();
 
     registerMock.mockResolvedValue({
-      token: 'jwt.register.token',
       user: {
         id: 'user-1',
         name: 'User One',
@@ -84,16 +91,18 @@ describe('auth controllers', () => {
         createdAt: new Date('2026-03-12T00:00:00.000Z'),
         updatedAt: new Date('2026-03-12T00:00:00.000Z'),
       },
+      requiresEmailVerification: true,
+      message: 'Conta criada. Verifica o teu email antes de iniciar sessão.',
     });
 
     await registerController(req, res, next);
 
     expect(registerMock).toHaveBeenCalledTimes(1);
-    expect(setAuthSessionCookiesMock).toHaveBeenCalledWith(res, 'jwt.register.token');
+    expect(setAuthSessionCookiesMock).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        token: 'jwt.register.token',
+        requiresEmailVerification: true,
       }),
     );
     expect(next).not.toHaveBeenCalled();
@@ -167,6 +176,56 @@ describe('auth controllers', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         token: 'jwt.google.token',
+      }),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('requestEmailVerificationController returns neutral message', async () => {
+    const req = {
+      body: {
+        email: 'user.one@example.com',
+      },
+    } as Request;
+    const res = createMockResponse();
+    const next = createMockNext();
+
+    requestEmailVerificationByEmailMock.mockResolvedValue({
+      message: 'Se existir uma conta com esse email, enviámos instruções de confirmação.',
+    });
+
+    await requestEmailVerificationController(req, res, next);
+
+    expect(requestEmailVerificationByEmailMock).toHaveBeenCalledWith('user.one@example.com');
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Se existir uma conta com esse email, enviámos instruções de confirmação.',
+      }),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test('confirmEmailVerificationController confirms token', async () => {
+    const req = {
+      body: {
+        token: 'verification.token.value',
+      },
+    } as Request;
+    const res = createMockResponse();
+    const next = createMockNext();
+
+    confirmEmailVerificationTokenMock.mockResolvedValue({
+      message: 'Email confirmado com sucesso.',
+    });
+
+    await confirmEmailVerificationController(req, res, next);
+
+    expect(confirmEmailVerificationTokenMock).toHaveBeenCalledWith('verification.token.value');
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Email confirmado com sucesso.',
       }),
     );
     expect(next).not.toHaveBeenCalled();

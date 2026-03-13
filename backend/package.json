@@ -10,7 +10,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run",
     "prisma:generate": "prisma generate --schema ../prisma/schema.prisma",
-    "prisma:push": "prisma db execute --schema ../prisma/schema.prisma --file ../prisma/migrations/20260308150000_reports_v11/migration.sql && prisma db push --schema ../prisma/schema.prisma",
+    "prisma:push": "prisma db execute --schema ../prisma/schema.prisma --file ../prisma/migrations/20260308150000_reports_v11/migration.sql && prisma db execute --schema ../prisma/schema.prisma --file ../prisma/migrations/20260312190000_email_verification_v12/migration.sql && prisma db push --schema ../prisma/schema.prisma",
     "prisma:migrate": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" prisma migrate dev --schema ../prisma/schema.prisma",
     "prisma:seed": "DATABASE_URL=\"${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/app_financas?schema=public}\" tsx ../prisma/seed.ts"
   },
@@ -29,6 +29,7 @@
     "jsonwebtoken": "^9.0.3",
     "luxon": "^3.6.1",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.2",
     "pdfkit": "^0.17.2",
     "zod": "^4.3.6"
   },
@@ -39,6 +40,7 @@
     "@types/luxon": "^3.4.2",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.13.9",
+    "@types/nodemailer": "^7.0.11",
     "@types/pdfkit": "^0.17.5",
     "prisma": "^6.16.2",
     "tsx": "^4.19.3",

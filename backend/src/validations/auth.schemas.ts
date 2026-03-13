@@ -21,3 +21,11 @@ export const loginBodySchema = z.object({
 export const googleAuthBodySchema = z.object({
   credential: z.string().trim().min(1, 'credential é obrigatório.'),
 });
+
+export const verifyEmailRequestBodySchema = z.object({
+  email: z.string().trim().email('email inválido.').toLowerCase(),
+});
+
+export const verifyEmailConfirmBodySchema = z.object({
+  token: z.string().trim().min(1, 'token é obrigatório.'),
+});

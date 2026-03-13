@@ -6,6 +6,12 @@ import { Prisma, UserRole, type User } from '@prisma/client';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/app-error.js';
 import { prisma } from '../lib/prisma.js';
+import {
+  assertEmailVerificationDeliveryConfigured,
+  issueEmailVerificationForUser,
+  confirmEmailVerificationToken,
+  requestEmailVerificationByEmail,
+} from './email-verification.service.js';
 
 const SALT_ROUNDS = 12;
 const googleOAuthClient = new OAuth2Client(env.googleClientId);
@@ -40,6 +46,12 @@ type GoogleLoginInput = {
 export type AuthResponse = {
   token: string;
   user: SafeUser;
+};
+
+export type RegisterResponse = {
+  user: SafeUser;
+  requiresEmailVerification: true;
+  message: string;
 };
 
 type DefaultCategory = {
@@ -156,7 +168,9 @@ function resolveGoogleProfileOrThrow(payload: TokenPayload | undefined): {
   };
 }
 
-export async function register(input: RegisterInput): Promise<AuthResponse> {
+export async function register(input: RegisterInput): Promise<RegisterResponse> {
+  assertEmailVerificationDeliveryConfigured();
+
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
   const normalizedEmail = input.email.trim().toLowerCase();
 
@@ -167,6 +181,7 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
           name: input.name,
           email: normalizedEmail,
           passwordHash,
+          emailVerifiedAt: null,
           defaultCurrency: input.defaultCurrency ?? 'EUR',
           role: UserRole.USER,
         },
@@ -177,11 +192,16 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
       return createdUser;
     });
 
-    const safeUser = toSafeUser(user);
+    await issueEmailVerificationForUser({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    });
 
     return {
-      token: createAccessToken(safeUser),
-      user: safeUser,
+      user: toSafeUser(user),
+      requiresEmailVerification: true,
+      message: 'Conta criada. Verifica o teu email antes de iniciar sessão.',
     };
   } catch (error) {
     throwConflictIfUniqueViolation(error, 'Já existe um utilizador com este email.');
@@ -199,6 +219,12 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
 
   if (!user.passwordHash) {
     throw new AppError('Esta conta usa login com Google. Use o botão "Google".', 401);
+  }
+
+  if (!user.emailVerifiedAt) {
+    throw new AppError('Confirma o teu email antes de iniciar sessão.', 403, {
+      code: 'EMAIL_NOT_VERIFIED',
+    });
   }
 
   const isPasswordValid = await bcrypt.compare(input.password, user.passwordHash);
@@ -244,6 +270,7 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
           passwordHash: null,
           googleId: googleProfile.googleId,
           avatarUrl: googleProfile.avatarUrl,
+          emailVerifiedAt: new Date(),
           defaultCurrency: 'EUR',
           role: UserRole.USER,
         },
@@ -270,6 +297,11 @@ export async function loginWithGoogle(input: GoogleLoginInput): Promise<AuthResp
 
     if (googleProfile.avatarUrl && googleProfile.avatarUrl !== existingUser.avatarUrl) {
       updateData.avatarUrl = googleProfile.avatarUrl;
+      shouldUpdate = true;
+    }
+
+    if (!existingUser.emailVerifiedAt) {
+      updateData.emailVerifiedAt = new Date();
       shouldUpdate = true;
     }
 
@@ -302,3 +334,5 @@ export async function getAuthenticatedUser(userId: string): Promise<SafeUser> {
 
   return toSafeUser(user);
 }
+
+export { confirmEmailVerificationToken, requestEmailVerificationByEmail };

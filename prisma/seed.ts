@@ -379,12 +379,14 @@ async function main(): Promise<void> {
     update: {
       name: seedUserName,
       defaultCurrency: seedCurrency,
+      emailVerifiedAt: new Date(),
     },
     create: {
       email: seedUserEmail,
       name: seedUserName,
       passwordHash: seedUserPasswordHash,
       defaultCurrency: seedCurrency,
+      emailVerifiedAt: new Date(),
     },
     select: {
       id: true,

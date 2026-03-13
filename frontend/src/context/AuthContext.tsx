@@ -24,7 +24,12 @@ type AuthContextValue = {
   isInitializing: boolean;
   login: (payload: LoginInput) => Promise<void>;
   loginWithGoogleCredential: (credential: string) => Promise<void>;
-  register: (payload: RegisterInput) => Promise<void>;
+  register: (
+    payload: RegisterInput,
+  ) => Promise<{
+    requiresEmailVerification: boolean;
+    message?: string;
+  }>;
   setAuthenticatedUser: (user: ApiUser) => void;
   logout: () => void;
 };
@@ -141,7 +146,20 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
 
   const register = useCallback(async (payload: RegisterInput) => {
     const auth = await registerUser(payload);
+    if (auth.requiresEmailVerification) {
+      writeStoredToken(null);
+      setToken(null);
+      setUser(null);
+      return {
+        requiresEmailVerification: true,
+        message: auth.message,
+      };
+    }
+
     applyAuthenticatedSession(auth);
+    return {
+      requiresEmailVerification: false,
+    };
   }, [applyAuthenticatedSession]);
 
   const setAuthenticatedUser = useCallback((nextUser: ApiUser) => {

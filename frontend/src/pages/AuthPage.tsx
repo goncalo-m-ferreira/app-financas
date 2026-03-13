@@ -29,6 +29,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const isRegisterMode = mode === 'register';
   const pageTitle = isRegisterMode ? 'Create Account' : 'Sign In';
@@ -52,6 +53,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
     setIsPasswordVisible(false);
     setIsConfirmPasswordVisible(false);
     setErrorMessage(null);
+    setSuccessMessage(null);
   }, [mode]);
 
   if (!isInitializing && isAuthenticated) {
@@ -61,6 +63,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
     setIsSubmitting(true);
 
     if (isRegisterMode && password !== confirmPassword) {
@@ -71,12 +74,20 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
 
     try {
       if (isRegisterMode) {
-        await register({
+        const registerResult = await register({
           name: name.trim(),
           email: email.trim(),
           password,
           defaultCurrency: defaultCurrency.trim().toUpperCase(),
         });
+
+        if (registerResult.requiresEmailVerification) {
+          setSuccessMessage(
+            registerResult.message ??
+              'Conta criada. Verifica o teu email para confirmares o registo.',
+          );
+          return;
+        }
       } else {
         await login({
           email: email.trim(),
@@ -220,6 +231,7 @@ export function AuthPage({ mode }: AuthPageProps): JSX.Element {
             </>
           ) : null}
 
+          {successMessage ? <StatusBanner tone="success">{successMessage}</StatusBanner> : null}
           {errorMessage ? <StatusBanner tone="danger">{errorMessage}</StatusBanner> : null}
 
           <ActionButton type="submit" disabled={isSubmitting} fullWidth>

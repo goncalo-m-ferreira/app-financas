@@ -27,6 +27,7 @@ function toSafeUser(user: User): SafeUser {
     id: user.id,
     name: user.name,
     email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt,
     role: user.role,
     googleId: user.googleId,
     avatarUrl: user.avatarUrl,

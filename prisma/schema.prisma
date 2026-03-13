@@ -65,6 +65,7 @@ model User {
   id                  String               @id @default(uuid())
   name                String
   email               String               @unique
+  emailVerifiedAt     DateTime?            @map("email_verified_at")
   passwordHash        String?              @map("password_hash")
   googleId            String?              @unique @map("google_id")
   avatarUrl           String?              @map("avatar_url")
@@ -80,8 +81,24 @@ model User {
   notifications       Notification[]
   recurringRules      RecurringRule[]
   recurringExecutions RecurringExecution[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "email_verification_tokens_user_id_idx")
+  @@index([tokenHash, usedAt, expiresAt], map: "email_verification_tokens_token_state_idx")
+  @@map("email_verification_tokens")
 }
 
 model ExpenseCategory {

@@ -14,6 +14,7 @@ import type {
   AuthPayload,
   BudgetOverview,
   DeleteCurrentUserResponse,
+  EmailVerificationResponse,
   CreateBudgetInput,
   CreateExpenseCategoryInput,
   CreateReportInput,
@@ -237,6 +238,20 @@ export async function loginWithGoogle(payload: GoogleAuthInput): Promise<AuthPay
   return requestJson<AuthPayload>('/auth/google', {
     method: 'POST',
     body: payload,
+  });
+}
+
+export async function requestEmailVerification(email: string): Promise<EmailVerificationResponse> {
+  return requestJson<EmailVerificationResponse>('/auth/verify-email/request', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export async function confirmEmailVerification(token: string): Promise<EmailVerificationResponse> {
+  return requestJson<EmailVerificationResponse>('/auth/verify-email/confirm', {
+    method: 'POST',
+    body: { token },
   });
 }
 
